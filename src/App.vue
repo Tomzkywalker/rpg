@@ -1,127 +1,131 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted } from "vue";
 
-import { maps } from './data/maps'
-import { CHARACTER_CLASSES } from './data/classes'
-import { useGameStore } from './stores/game'
+import { maps } from "./data/maps";
+import { CHARACTER_CLASSES } from "./data/classes";
+import { useGameStore } from "./stores/game";
 
 import type {
   CharacterClass,
+  Equipment,
   EquipmentRarity,
-} from './types/equipment'
+} from "./types/equipment";
 
-import type {
-  InventorySort,
-} from './stores/inventory'
+import type { InventorySort } from "./stores/inventory";
 
-const game = useGameStore()
+const game = useGameStore();
+
+async function equipItem(item: Equipment) {
+  if (item.slot !== "accessory") {
+    await game.equipInventoryItem(item.id);
+    return;
+  }
+
+  if (!game.equipped.accessory1 || !game.equipped.accessory2) {
+    await game.equipInventoryItem(item.id);
+    return;
+  }
+
+  const choice = window.prompt(
+    [
+      "Kedua slot accessory sudah terisi.",
+      "",
+      `1 = ${game.equipped.accessory1.name}`,
+      `2 = ${game.equipped.accessory2.name}`,
+      "",
+      "Pilih slot yang ingin diganti: 1 atau 2",
+    ].join("\n"),
+  );
+
+  if (choice === "1") {
+    await game.equipInventoryItem(item.id, "accessory1");
+  } else if (choice === "2") {
+    await game.equipInventoryItem(item.id, "accessory2");
+  }
+}
 
 const rarityOptions: EquipmentRarity[] = [
-  'common',
-  'uncommon',
-  'rare',
-  'epic',
-  'legendary',
-  'mythical',
-]
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+  "mythical",
+];
+
+const equipmentSlots = [
+  { key: "weapon", label: "Weapon" },
+  { key: "head", label: "Head" },
+  { key: "armor", label: "Armor" },
+  { key: "gloves", label: "Gloves" },
+  { key: "boots", label: "Boots" },
+  { key: "offHand", label: "Off-Hand" },
+  { key: "accessory1", label: "Accessory 1" },
+  { key: "accessory2", label: "Accessory 2" },
+] as const;
 
 onMounted(() => {
-  void game.initializeGame()
-})
+  void game.initializeGame();
+});
 
-function changeJob(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLSelectElement
+function changeJob(event: Event) {
+  const target = event.target as HTMLSelectElement;
 
-  void game.setCharacterClass(
-    target.value as CharacterClass,
-  )
+  void game.setCharacterClass(target.value as CharacterClass);
 }
 
-function changeInventorySort(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLSelectElement
+function changeInventorySort(event: Event) {
+  const target = event.target as HTMLSelectElement;
 
-  void game.setInventorySort(
-    target.value as InventorySort,
-  )
+  void game.setInventorySort(target.value as InventorySort);
 }
 
-function changeAutoSellEnabled(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLInputElement
+function changeAutoSellEnabled(event: Event) {
+  const target = event.target as HTMLInputElement;
 
-  void game.setAutoSellEnabled(
-    target.checked,
-  )
+  void game.setAutoSellEnabled(target.checked);
 }
 
-function changeAutoSellLevelEnabled(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLInputElement
+function changeAutoSellLevelEnabled(event: Event) {
+  const target = event.target as HTMLInputElement;
 
   void game.setAutoSellBelowLevel(
     target.checked,
     game.inventory.autoSell.sellBelowLevel,
-  )
+  );
 }
 
-function changeAutoSellLevel(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLInputElement
+function changeAutoSellLevel(event: Event) {
+  const target = event.target as HTMLInputElement;
 
   void game.setAutoSellBelowLevel(
-    game.inventory.autoSell
-      .sellBelowLevelEnabled,
+    game.inventory.autoSell.sellBelowLevelEnabled,
     Number(target.value),
-  )
+  );
 }
 
-function changeAutoSellRarityEnabled(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLInputElement
+function changeAutoSellRarityEnabled(event: Event) {
+  const target = event.target as HTMLInputElement;
 
   void game.setAutoSellMinimumRarity(
     target.checked,
-    game.inventory.autoSell
-      .minimumRarity,
-  )
+    game.inventory.autoSell.minimumRarity,
+  );
 }
 
-function changeMinimumRarity(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLSelectElement
+function changeMinimumRarity(event: Event) {
+  const target = event.target as HTMLSelectElement;
 
   void game.setAutoSellMinimumRarity(
-    game.inventory.autoSell
-      .sellBelowRarityEnabled,
+    game.inventory.autoSell.sellBelowRarityEnabled,
     target.value as EquipmentRarity,
-  )
+  );
 }
 
-function changeOtherJobAutoSell(
-  event: Event,
-) {
-  const target =
-    event.target as HTMLInputElement
+function changeOtherJobAutoSell(event: Event) {
+  const target = event.target as HTMLInputElement;
 
-  void game.setAutoSellOtherClasses(
-    target.checked,
-  )
+  void game.setAutoSellOtherClasses(target.checked);
 }
 </script>
 
@@ -169,11 +173,15 @@ function changeOtherJobAutoSell(
 
         <h2>Base Stats</h2>
 
-        <div
-          v-for="(value, stat) in game.stats"
-          :key="stat"
-        >
-          <strong>{{ stat }}</strong>: {{ value }}
+        <div v-for="(value, stat) in game.stats" :key="stat">
+          <strong>{{ stat }}</strong
+          >:
+          {{ value }}
+
+          <span v-if="game.equipmentBaseStatBonuses[stat] > 0">
+            +{{ game.equipmentBaseStatBonuses[stat] }}
+            gear
+          </span>
 
           <button
             :disabled="game.statusPoints <= 0"
@@ -205,18 +213,10 @@ function changeOtherJobAutoSell(
             :value="game.selectedMapId"
             :disabled="game.isAutoHunting"
             @change="
-              game.selectMap(
-                Number(
-                  ($event.target as HTMLSelectElement).value,
-                ),
-              )
+              game.selectMap(Number(($event.target as HTMLSelectElement).value))
             "
           >
-            <option
-              v-for="map in maps"
-              :key="map.id"
-              :value="map.id"
-            >
+            <option v-for="map in maps" :key="map.id" :value="map.id">
               {{ map.name }}
               (Lv. {{ map.minLevel }}-{{ map.maxLevel }})
             </option>
@@ -228,26 +228,13 @@ function changeOtherJobAutoSell(
           <strong>{{ game.selectedMap.name }}</strong>
         </p>
 
-        <button
-          v-if="!game.isAutoHunting"
-          @click="game.startAutoHunt"
-        >
+        <button v-if="!game.isAutoHunting" @click="game.startAutoHunt">
           Start Auto Hunt
         </button>
 
-        <button
-          v-else
-          @click="game.stopAutoHunt"
-        >
-          Stop Auto Hunt
-        </button>
+        <button v-else @click="game.stopAutoHunt">Stop Auto Hunt</button>
 
-        <button
-          :disabled="game.isAutoHunting"
-          @click="game.rest"
-        >
-          Rest
-        </button>
+        <button :disabled="game.isAutoHunting" @click="game.rest">Rest</button>
 
         <div v-if="game.currentMonster">
           <hr />
@@ -269,6 +256,33 @@ function changeOtherJobAutoSell(
 
         <hr />
 
+        <h2>Equipment</h2>
+
+        <div v-for="slot in equipmentSlots" :key="slot.key">
+          <strong>{{ slot.label }}</strong>
+
+          <template v-if="game.equipped[slot.key]">
+            <span>
+              —
+              {{ game.equipped[slot.key]?.name }}
+            </span>
+
+            <button @click="game.unequipItem(slot.key)">Unequip</button>
+          </template>
+
+          <span v-else>— Empty</span>
+        </div>
+
+        <p>
+          Gear bonus: HP +{{ game.equipmentMainStatBonuses.HP }}, ATK +{{
+            game.equipmentMainStatBonuses.ATK
+          }}, DEF +{{ game.equipmentMainStatBonuses.DEF }}, MATK +{{
+            game.equipmentMainStatBonuses.MATK
+          }}, MDEF +{{ game.equipmentMainStatBonuses.MDEF }}
+        </p>
+
+        <hr />
+
         <h2>Inventory</h2>
 
         <p>
@@ -283,21 +297,13 @@ function changeOtherJobAutoSell(
             :value="game.inventory.sortMode"
             @change="changeInventorySort"
           >
-            <option value="rarityDesc">
-              Rarity ↓
-            </option>
+            <option value="rarityDesc">Rarity ↓</option>
 
-            <option value="rarityAsc">
-              Rarity ↑
-            </option>
+            <option value="rarityAsc">Rarity ↑</option>
 
-            <option value="levelDesc">
-              Level ↓
-            </option>
+            <option value="levelDesc">Level ↓</option>
 
-            <option value="levelAsc">
-              Level ↑
-            </option>
+            <option value="levelAsc">Level ↑</option>
           </select>
         </label>
 
@@ -313,9 +319,7 @@ function changeOtherJobAutoSell(
         <label>
           <input
             type="checkbox"
-            :checked="
-              game.inventory.autoSell.enabled
-            "
+            :checked="game.inventory.autoSell.enabled"
             @change="changeAutoSellEnabled"
           />
 
@@ -327,13 +331,8 @@ function changeOtherJobAutoSell(
         <label>
           <input
             type="checkbox"
-            :checked="
-              game.inventory.autoSell
-                .sellBelowLevelEnabled
-            "
-            @change="
-              changeAutoSellLevelEnabled
-            "
+            :checked="game.inventory.autoSell.sellBelowLevelEnabled"
+            @change="changeAutoSellLevelEnabled"
           />
 
           Sell item below Level
@@ -342,10 +341,7 @@ function changeOtherJobAutoSell(
         <input
           type="number"
           min="1"
-          :value="
-            game.inventory.autoSell
-              .sellBelowLevel
-          "
+          :value="game.inventory.autoSell.sellBelowLevel"
           @change="changeAutoSellLevel"
         />
 
@@ -354,30 +350,18 @@ function changeOtherJobAutoSell(
         <label>
           <input
             type="checkbox"
-            :checked="
-              game.inventory.autoSell
-                .sellBelowRarityEnabled
-            "
-            @change="
-              changeAutoSellRarityEnabled
-            "
+            :checked="game.inventory.autoSell.sellBelowRarityEnabled"
+            @change="changeAutoSellRarityEnabled"
           />
 
           Sell below rarity
         </label>
 
         <select
-          :value="
-            game.inventory.autoSell
-              .minimumRarity
-          "
+          :value="game.inventory.autoSell.minimumRarity"
           @change="changeMinimumRarity"
         >
-          <option
-            v-for="rarity in rarityOptions"
-            :key="rarity"
-            :value="rarity"
-          >
+          <option v-for="rarity in rarityOptions" :key="rarity" :value="rarity">
             {{ rarity }}
           </option>
         </select>
@@ -387,13 +371,8 @@ function changeOtherJobAutoSell(
         <label>
           <input
             type="checkbox"
-            :checked="
-              game.inventory.autoSell
-                .sellOtherClasses
-            "
-            @change="
-              changeOtherJobAutoSell
-            "
+            :checked="game.inventory.autoSell.sellOtherClasses"
+            @change="changeOtherJobAutoSell"
           />
 
           Sell equipment from other jobs
@@ -403,20 +382,14 @@ function changeOtherJobAutoSell(
           <p>Inventory kosong.</p>
         </div>
 
-        <div
-          v-for="
-            item in game.inventory.sortedItems
-          "
-          :key="item.id"
-        >
+        <div v-for="item in game.inventory.sortedItems" :key="item.id">
           <hr />
 
           <strong>{{ item.name }}</strong>
 
           <p>
             {{ item.rarity.toUpperCase() }}
-            • Lv.{{ item.level }}
-            • Quality {{ item.quality }}%
+            • Lv.{{ item.level }} • Quality {{ item.quality }}%
           </p>
 
           <p>
@@ -424,53 +397,31 @@ function changeOtherJobAutoSell(
             +{{ item.mainStatValue }}
           </p>
 
-          <p
-            v-for="(
-              affix,
-              index
-            ) in item.affixes"
-            :key="index"
-          >
+          <p v-for="(affix, index) in item.affixes" :key="index">
             {{ affix.stat }}
             +{{ affix.value }}
           </p>
 
           <p>
             Job:
-            {{ item.requiredClass ?? 'All' }}
+            {{ item.requiredClass ?? "All" }}
           </p>
 
           <p>
             Sell:
-            {{
-              game.inventory.calculateSellPrice(
-                item,
-              )
-            }}
+            {{ game.inventory.calculateSellPrice(item) }}
             Gold
           </p>
 
-          <button
-            @click="
-              game.toggleInventoryItemLock(
-                item.id,
-              )
-            "
-          >
-            {{
-              item.locked
-                ? 'Unlock'
-                : 'Lock'
-            }}
+          <button @click="equipItem(item)">Equip</button>
+
+          <button @click="game.toggleInventoryItemLock(item.id)">
+            {{ item.locked ? "Unlock" : "Lock" }}
           </button>
 
           <button
             :disabled="item.locked"
-            @click="
-              game.sellInventoryItem(
-                item.id,
-              )
-            "
+            @click="game.sellInventoryItem(item.id)"
           >
             Sell
           </button>
@@ -481,10 +432,7 @@ function changeOtherJobAutoSell(
 
           <h2>Battle Log</h2>
 
-          <p
-            v-for="(log, index) in game.battleLog"
-            :key="index"
-          >
+          <p v-for="(log, index) in game.battleLog" :key="index">
             {{ log }}
           </p>
         </div>

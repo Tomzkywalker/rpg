@@ -47,9 +47,25 @@ interface ExtendedInventorySaveData {
     }
 }
 
+type EquippedSlotKey =
+    | 'weapon'
+    | 'head'
+    | 'armor'
+    | 'gloves'
+    | 'boots'
+    | 'offHand'
+    | 'accessory1'
+    | 'accessory2'
+
+type EquippedItems = Record<
+    EquippedSlotKey,
+    Equipment | null
+>
+
 type ExtendedGameSaveData = GameSaveData & {
     characterClass?: CharacterClass
     inventory?: ExtendedInventorySaveData
+    equipped?: Partial<EquippedItems>
 }
 
 export const useGameStore = defineStore('game', () => {
@@ -57,6 +73,18 @@ export const useGameStore = defineStore('game', () => {
 
     const characterClass =
         ref<CharacterClass>('warrior')
+
+    const equipped =
+        ref<EquippedItems>({
+            weapon: null,
+            head: null,
+            armor: null,
+            gloves: null,
+            boots: null,
+            offHand: null,
+            accessory1: null,
+            accessory2: null,
+        })
 
     const level =
         ref<number>(
@@ -136,16 +164,110 @@ export const useGameStore = defineStore('game', () => {
         ),
     })
 
+    const equipmentBaseStatBonuses =
+        computed(() => {
+            const bonuses = {
+                STR: 0,
+                AGI: 0,
+                VIT: 0,
+                INT: 0,
+                DEX: 0,
+                LUK: 0,
+            }
+
+            for (
+                const item of
+                Object.values(
+                    equipped.value,
+                )
+            ) {
+                if (!item) {
+                    continue
+                }
+
+                for (
+                    const affix of
+                    item.affixes
+                ) {
+                    bonuses[affix.stat] +=
+                        affix.value
+                }
+            }
+
+            return bonuses
+        })
+
+    const totalStats = computed(() => ({
+        STR:
+            stats.value.STR +
+            equipmentBaseStatBonuses
+                .value.STR,
+
+        AGI:
+            stats.value.AGI +
+            equipmentBaseStatBonuses
+                .value.AGI,
+
+        VIT:
+            stats.value.VIT +
+            equipmentBaseStatBonuses
+                .value.VIT,
+
+        INT:
+            stats.value.INT +
+            equipmentBaseStatBonuses
+                .value.INT,
+
+        DEX:
+            stats.value.DEX +
+            equipmentBaseStatBonuses
+                .value.DEX,
+
+        LUK:
+            stats.value.LUK +
+            equipmentBaseStatBonuses
+                .value.LUK,
+    }))
+
+    const equipmentMainStatBonuses =
+        computed(() => {
+            const bonuses = {
+                HP: 0,
+                ATK: 0,
+                DEF: 0,
+                MATK: 0,
+                MDEF: 0,
+            }
+
+            for (
+                const item of
+                Object.values(
+                    equipped.value,
+                )
+            ) {
+                if (!item) {
+                    continue
+                }
+
+                bonuses[item.mainStat] +=
+                    item.mainStatValue
+            }
+
+            return bonuses
+        })
+
     const maxHp = computed(() => {
         const config =
             STATS_CONFIG.hp
 
         return (
             config.base +
-            stats.value.VIT *
-                config.perVit +
+            totalStats.value.VIT *
+            config.perVit +
             level.value *
-                config.perLevel
+            config.perLevel +
+            equipmentMainStatBonuses
+                .value.HP
         )
     })
 
@@ -155,10 +277,10 @@ export const useGameStore = defineStore('game', () => {
 
         return (
             config.base +
-            stats.value.INT *
-                config.perInt +
+            totalStats.value.INT *
+            config.perInt +
             level.value *
-                config.perLevel
+            config.perLevel
         )
     })
 
@@ -168,10 +290,12 @@ export const useGameStore = defineStore('game', () => {
 
         return Math.round(
             config.base +
-                stats.value.STR *
-                    config.perStr +
-                level.value *
-                    config.perLevel,
+            totalStats.value.STR *
+            config.perStr +
+            level.value *
+            config.perLevel +
+            equipmentMainStatBonuses
+                .value.ATK,
         )
     })
 
@@ -180,10 +304,12 @@ export const useGameStore = defineStore('game', () => {
             STATS_CONFIG.defense
 
         return Math.floor(
-            stats.value.VIT *
-                config.perVit +
-                level.value *
-                    config.perLevel,
+            totalStats.value.VIT *
+            config.perVit +
+            level.value *
+            config.perLevel +
+            equipmentMainStatBonuses
+                .value.DEF,
         )
     })
 
@@ -193,10 +319,12 @@ export const useGameStore = defineStore('game', () => {
 
         return Math.round(
             config.base +
-                stats.value.INT *
-                    config.perInt +
-                level.value *
-                    config.perLevel,
+            totalStats.value.INT *
+            config.perInt +
+            level.value *
+            config.perLevel +
+            equipmentMainStatBonuses
+                .value.MATK,
         )
     })
 
@@ -206,12 +334,14 @@ export const useGameStore = defineStore('game', () => {
                 STATS_CONFIG.magicDefense
 
             return Math.floor(
-                stats.value.INT *
-                    config.perInt +
-                    stats.value.VIT *
-                        config.perVit +
-                    level.value *
-                        config.perLevel,
+                totalStats.value.INT *
+                config.perInt +
+                totalStats.value.VIT *
+                config.perVit +
+                level.value *
+                config.perLevel +
+                equipmentMainStatBonuses
+                    .value.MDEF,
             )
         })
 
@@ -221,10 +351,10 @@ export const useGameStore = defineStore('game', () => {
 
         return Math.round(
             config.base +
-                stats.value.DEX *
-                    config.perDex +
-                level.value *
-                    config.perLevel,
+            totalStats.value.DEX *
+            config.perDex +
+            level.value *
+            config.perLevel,
         )
     })
 
@@ -234,10 +364,10 @@ export const useGameStore = defineStore('game', () => {
 
         return Math.round(
             config.base +
-                stats.value.AGI *
-                    config.perAgi +
-                level.value *
-                    config.perLevel,
+            totalStats.value.AGI *
+            config.perAgi +
+            level.value *
+            config.perLevel,
         )
     })
 
@@ -249,8 +379,8 @@ export const useGameStore = defineStore('game', () => {
             return Math.min(
                 config.max,
                 config.base +
-                    stats.value.LUK *
-                        config.perLuk,
+                totalStats.value.LUK *
+                config.perLuk,
             )
         })
 
@@ -264,10 +394,10 @@ export const useGameStore = defineStore('game', () => {
 
                 Math.round(
                     config.base +
-                        stats.value.AGI *
-                            config.perAgi +
-                        stats.value.DEX *
-                            config.perDex,
+                    totalStats.value.AGI *
+                    config.perAgi +
+                    totalStats.value.DEX *
+                    config.perDex,
                 ),
             )
         })
@@ -288,7 +418,7 @@ export const useGameStore = defineStore('game', () => {
             return Math.max(
                 config.minimumMs,
                 config.baseMs -
-                    reduction,
+                reduction,
             )
         })
 
@@ -297,12 +427,12 @@ export const useGameStore = defineStore('game', () => {
             return Math.round(
                 LEVELING_CONFIG
                     .exp.base *
-                    Math.pow(
-                        LEVELING_CONFIG
-                            .exp.growth,
+                Math.pow(
+                    LEVELING_CONFIG
+                        .exp.growth,
 
-                        level.value - 1,
-                    ),
+                    level.value - 1,
+                ),
             )
         })
 
@@ -371,6 +501,10 @@ export const useGameStore = defineStore('game', () => {
             characterClass:
                 characterClass.value,
 
+            equipped: {
+                ...equipped.value,
+            },
+
             inventory: {
                 items:
                     inventory.items.map(
@@ -416,7 +550,7 @@ export const useGameStore = defineStore('game', () => {
         try {
             const save =
                 (await loadGame()) as
-                    ExtendedGameSaveData | null
+                ExtendedGameSaveData | null
 
             if (save) {
                 level.value =
@@ -448,13 +582,55 @@ export const useGameStore = defineStore('game', () => {
                     save.characterClass ??
                     'warrior'
 
+                equipped.value = {
+                    weapon:
+                        save.equipped
+                            ?.weapon ??
+                        null,
+
+                    head:
+                        save.equipped
+                            ?.head ??
+                        null,
+
+                    armor:
+                        save.equipped
+                            ?.armor ??
+                        null,
+
+                    gloves:
+                        save.equipped
+                            ?.gloves ??
+                        null,
+
+                    boots:
+                        save.equipped
+                            ?.boots ??
+                        null,
+
+                    offHand:
+                        save.equipped
+                            ?.offHand ??
+                        null,
+
+                    accessory1:
+                        save.equipped
+                            ?.accessory1 ??
+                        null,
+
+                    accessory2:
+                        save.equipped
+                            ?.accessory2 ??
+                        null,
+                }
+
                 if (
                     save.inventory
                 ) {
                     inventory.setItems(
                         save.inventory
                             .items ??
-                            [],
+                        [],
                     )
 
                     inventory.setCapacity(
@@ -465,7 +641,7 @@ export const useGameStore = defineStore('game', () => {
                     inventory.setSortMode(
                         save.inventory
                             .sortMode ??
-                            'rarityDesc',
+                        'rarityDesc',
                     )
 
                     inventory
@@ -473,7 +649,7 @@ export const useGameStore = defineStore('game', () => {
                             save.inventory
                                 .autoSell
                                 ?.enabled ??
-                                false,
+                            false,
                         )
 
                     inventory
@@ -481,12 +657,12 @@ export const useGameStore = defineStore('game', () => {
                             save.inventory
                                 .autoSell
                                 ?.sellBelowLevelEnabled ??
-                                false,
+                            false,
 
                             save.inventory
                                 .autoSell
                                 ?.sellBelowLevel ??
-                                1,
+                            1,
                         )
 
                     inventory
@@ -494,12 +670,12 @@ export const useGameStore = defineStore('game', () => {
                             save.inventory
                                 .autoSell
                                 ?.sellBelowRarityEnabled ??
-                                false,
+                            false,
 
                             save.inventory
                                 .autoSell
                                 ?.minimumRarity ??
-                                'common',
+                            'common',
                         )
 
                     inventory
@@ -507,7 +683,7 @@ export const useGameStore = defineStore('game', () => {
                             save.inventory
                                 .autoSell
                                 ?.sellOtherClasses ??
-                                false,
+                            false,
                         )
                 }
 
@@ -624,8 +800,8 @@ export const useGameStore = defineStore('game', () => {
             hp.value =
                 Math.min(
                     hp.value +
-                        STATS_CONFIG
-                            .hp.perVit,
+                    STATS_CONFIG
+                        .hp.perVit,
 
                     maxHp.value,
                 )
@@ -637,8 +813,8 @@ export const useGameStore = defineStore('game', () => {
             mp.value =
                 Math.min(
                     mp.value +
-                        STATS_CONFIG
-                            .mp.perInt,
+                    STATS_CONFIG
+                        .mp.perInt,
 
                     maxMp.value,
                 )
@@ -706,9 +882,9 @@ export const useGameStore = defineStore('game', () => {
                 config.max,
 
                 config.base +
-                    (hit.value -
-                        monster.flee) *
-                        config.statDifferenceMultiplier,
+                (hit.value -
+                    monster.flee) *
+                config.statDifferenceMultiplier,
             ),
         )
     }
@@ -727,9 +903,9 @@ export const useGameStore = defineStore('game', () => {
                 config.max,
 
                 config.base +
-                    (monster.hit -
-                        flee.value) *
-                        config.statDifferenceMultiplier,
+                (monster.hit -
+                    flee.value) *
+                config.statDifferenceMultiplier,
             ),
         )
     }
@@ -742,15 +918,15 @@ export const useGameStore = defineStore('game', () => {
         const randomBonus =
             Math.floor(
                 Math.random() *
-                    (damageConfig
-                        .randomBonusMax +
-                        1),
+                (damageConfig
+                    .randomBonusMax +
+                    1),
             )
 
         const isCritical =
             Math.random() <
             criticalChance.value /
-                100
+            100
 
         const rawDamage =
             attack.value +
@@ -763,10 +939,10 @@ export const useGameStore = defineStore('game', () => {
 
                     Math.round(
                         rawDamage *
-                            (isCritical
-                                ? COMBAT_CONFIG
-                                    .criticalDamageMultiplier
-                                : 1),
+                        (isCritical
+                            ? COMBAT_CONFIG
+                                .criticalDamageMultiplier
+                            : 1),
                     ),
                 ),
 
@@ -784,17 +960,17 @@ export const useGameStore = defineStore('game', () => {
         const randomBonus =
             Math.floor(
                 Math.random() *
-                    (damageConfig
-                        .randomBonusMax +
-                        1),
+                (damageConfig
+                    .randomBonusMax +
+                    1),
             )
 
         return Math.max(
             damageConfig.min,
 
             monster.attack -
-                defense.value +
-                randomBonus,
+            defense.value +
+            randomBonus,
         )
     }
 
@@ -938,9 +1114,9 @@ export const useGameStore = defineStore('game', () => {
         const expPenalty =
             Math.ceil(
                 expNeeded.value *
-                    LEVELING_CONFIG
-                        .death
-                        .expPenaltyRate,
+                LEVELING_CONFIG
+                    .death
+                    .expPenaltyRate,
             )
 
         const actualExpLost =
@@ -956,7 +1132,7 @@ export const useGameStore = defineStore('game', () => {
                     .minimumExp,
 
                 exp.value -
-                    expPenalty,
+                expPenalty,
             )
 
         hp.value =
@@ -1010,8 +1186,8 @@ export const useGameStore = defineStore('game', () => {
                     0,
 
                     monsterHp.value -
-                        playerAttack
-                            .damage,
+                    playerAttack
+                        .damage,
                 )
 
             addLog(
@@ -1080,7 +1256,7 @@ export const useGameStore = defineStore('game', () => {
                     0,
 
                     hp.value -
-                        monsterDamage,
+                    monsterDamage,
                 )
 
             addLog(
@@ -1191,6 +1367,178 @@ export const useGameStore = defineStore('game', () => {
         await persistGame()
     }
 
+    function getEquipmentTargetSlot(
+        item: Equipment,
+        accessorySlot:
+            'accessory1' |
+            'accessory2' =
+            'accessory1',
+    ): EquippedSlotKey {
+        if (
+            item.slot ===
+            'accessory'
+        ) {
+            return accessorySlot
+        }
+
+        return item.slot
+    }
+
+    function canEquipItem(
+        item: Equipment,
+    ) {
+        return (
+            item.requiredClass === null ||
+            item.requiredClass ===
+            characterClass.value
+        )
+    }
+
+    async function equipInventoryItem(
+        itemId: string,
+        accessorySlot:
+            'accessory1' |
+            'accessory2' =
+            'accessory1',
+    ) {
+
+        const item =
+            inventory.getItemById(
+                itemId,
+            )
+
+        if (!item) {
+            return
+        }
+
+        if (
+            !canEquipItem(item)
+        ) {
+            addLog(
+                `${item.name} tidak bisa dipakai oleh job ${characterClass.value}.`,
+            )
+
+            return
+        }
+
+        let targetSlot:
+            EquippedSlotKey
+
+        if (
+            item.slot === 'accessory'
+        ) {
+            if (
+                !equipped.value.accessory1
+            ) {
+                targetSlot = 'accessory1'
+            } else if (
+                !equipped.value.accessory2
+            ) {
+                targetSlot = 'accessory2'
+            } else {
+                targetSlot =
+                    accessorySlot
+            }
+        } else {
+            targetSlot =
+                getEquipmentTargetSlot(
+                    item,
+                    accessorySlot,
+                )
+        }
+
+        const previousItem =
+            equipped.value[
+            targetSlot
+            ]
+
+        inventory.setItems(
+            inventory.items.filter(
+                (inventoryItem) =>
+                    inventoryItem.id !==
+                    item.id,
+            ),
+        )
+
+        if (previousItem) {
+            inventory.setItems([
+                ...inventory.items,
+                previousItem,
+            ])
+        }
+
+        equipped.value[
+            targetSlot
+        ] = item
+
+        hp.value =
+            Math.min(
+                hp.value,
+                maxHp.value,
+            )
+
+        mp.value =
+            Math.min(
+                mp.value,
+                maxMp.value,
+            )
+
+        addLog(
+            `${item.name} dipasang.`,
+        )
+
+        await persistGame()
+    }
+
+    async function unequipItem(
+        slot: EquippedSlotKey,
+    ) {
+
+        const item =
+            equipped.value[slot]
+
+        if (!item) {
+            return
+        }
+
+        if (
+            inventory.itemCount >=
+            inventory.capacity
+        ) {
+            addLog(
+                `${item.name} tidak bisa dilepas karena inventory penuh.`,
+            )
+
+            return
+        }
+
+        equipped.value[slot] =
+            null
+
+        inventory.setItems([
+            ...inventory.items,
+            item,
+        ])
+
+        hp.value =
+            Math.min(
+                hp.value,
+                maxHp.value,
+            )
+
+        mp.value =
+            Math.min(
+                mp.value,
+                maxMp.value,
+            )
+
+        addLog(
+            `${item.name} dilepas.`,
+        )
+
+        await persistGame()
+    }
+
     async function setCharacterClass(
         newClass: CharacterClass,
     ) {
@@ -1204,6 +1552,26 @@ export const useGameStore = defineStore('game', () => {
             characterClass.value ===
             newClass
         ) {
+            return
+        }
+
+        const incompatibleItem =
+            Object.values(
+                equipped.value,
+            ).find(
+                (item) =>
+                    item !== null &&
+                    item.requiredClass !==
+                    null &&
+                    item.requiredClass !==
+                    newClass,
+            )
+
+        if (incompatibleItem) {
+            addLog(
+                `Lepas ${incompatibleItem.name} sebelum mengganti job.`,
+            )
+
             return
         }
 
@@ -1370,6 +1738,7 @@ export const useGameStore = defineStore('game', () => {
 
         characterClass,
         inventory,
+        equipped,
 
         selectedMapId,
         currentMonster,
@@ -1381,6 +1750,9 @@ export const useGameStore = defineStore('game', () => {
 
         battleLog,
         stats,
+        totalStats,
+        equipmentBaseStatBonuses,
+        equipmentMainStatBonuses,
 
         maxHp,
         maxMp,
@@ -1413,6 +1785,9 @@ export const useGameStore = defineStore('game', () => {
         rest,
 
         setCharacterClass,
+
+        equipInventoryItem,
+        unequipItem,
 
         toggleInventoryItemLock,
         sellInventoryItem,

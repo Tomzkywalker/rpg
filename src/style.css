@@ -22,6 +22,7 @@ body,
 body {
   min-width: 320px;
   background: #111318;
+  cursor: url("/cursor.svg") 4 3, auto;
 }
 
 button,
@@ -29,6 +30,14 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+button,
+a,
+select,
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: url("/cursor.svg") 4 3, pointer;
 }
 
 .app-shell {
