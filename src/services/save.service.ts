@@ -1,3 +1,9 @@
+import type {
+  CharacterClass,
+  Equipment,
+  EquipmentRarity,
+} from '../types/equipment'
+
 const DB_NAME = 'solo-rpg-db'
 const DB_VERSION = 1
 const STORE_NAME = 'game-save'
@@ -13,6 +19,7 @@ export interface GameSaveData {
   kills: number
   deaths: number
   selectedMapId: number
+
   stats: {
     STR: number
     AGI: number
@@ -21,17 +28,52 @@ export interface GameSaveData {
     DEX: number
     LUK: number
   }
+
+  characterClass?: CharacterClass
+
+  inventory?: {
+    items: Equipment[]
+    capacity: number
+
+    sortMode:
+      | 'levelDesc'
+      | 'levelAsc'
+      | 'rarityDesc'
+      | 'rarityAsc'
+
+    autoSell: {
+      enabled: boolean
+
+      sellBelowLevelEnabled: boolean
+      sellBelowLevel: number
+
+      sellBelowRarityEnabled: boolean
+      minimumRarity: EquipmentRarity
+
+      sellOtherClasses: boolean
+    }
+  }
 }
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
+    const request =
+      indexedDB.open(
+        DB_NAME,
+        DB_VERSION,
+      )
 
     request.onupgradeneeded = () => {
       const db = request.result
 
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
+      if (
+        !db.objectStoreNames.contains(
+          STORE_NAME,
+        )
+      ) {
+        db.createObjectStore(
+          STORE_NAME,
+        )
       }
     }
 
@@ -50,48 +92,73 @@ export async function saveGame(
 ): Promise<void> {
   const db = await openDatabase()
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      'readwrite',
-    )
+  return new Promise(
+    (resolve, reject) => {
+      const transaction =
+        db.transaction(
+          STORE_NAME,
+          'readwrite',
+        )
 
-    const store = transaction.objectStore(STORE_NAME)
+      const store =
+        transaction.objectStore(
+          STORE_NAME,
+        )
 
-    store.put(data, SAVE_KEY)
+      store.put(
+        data,
+        SAVE_KEY,
+      )
 
-    transaction.oncomplete = () => {
-      db.close()
-      resolve()
-    }
+      transaction.oncomplete = () => {
+        db.close()
+        resolve()
+      }
 
-    transaction.onerror = () => {
-      db.close()
-      reject(transaction.error)
-    }
-  })
+      transaction.onerror = () => {
+        db.close()
+        reject(
+          transaction.error,
+        )
+      }
+    },
+  )
 }
 
 export async function loadGame(): Promise<GameSaveData | null> {
   const db = await openDatabase()
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(
-      STORE_NAME,
-      'readonly',
-    )
+  return new Promise(
+    (resolve, reject) => {
+      const transaction =
+        db.transaction(
+          STORE_NAME,
+          'readonly',
+        )
 
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.get(SAVE_KEY)
+      const store =
+        transaction.objectStore(
+          STORE_NAME,
+        )
 
-    request.onsuccess = () => {
-      db.close()
-      resolve(request.result ?? null)
-    }
+      const request =
+        store.get(SAVE_KEY)
 
-    request.onerror = () => {
-      db.close()
-      reject(request.error)
-    }
-  })
+      request.onsuccess = () => {
+        db.close()
+
+        resolve(
+          request.result ??
+            null,
+        )
+      }
+
+      request.onerror = () => {
+        db.close()
+        reject(
+          request.error,
+        )
+      }
+    },
+  )
 }

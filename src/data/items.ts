@@ -32,6 +32,12 @@ export interface EquipmentFamily {
   names: Record<CharacterClass, string>
 }
 
+export interface AccessoryFamily {
+  minLevel: number
+  maxLevel: number
+  name: string
+}
+
 export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
   {
     minLevel: 1,
@@ -132,6 +138,59 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
       archer: 'Dragonwing',
       mage: 'Ancient',
     },
+  },
+]
+
+export const ACCESSORY_FAMILIES: AccessoryFamily[] = [
+  {
+    minLevel: 1,
+    maxLevel: 10,
+    name: 'Traveler',
+  },
+  {
+    minLevel: 11,
+    maxLevel: 20,
+    name: 'Enchanted',
+  },
+  {
+    minLevel: 21,
+    maxLevel: 30,
+    name: 'Mystic',
+  },
+  {
+    minLevel: 31,
+    maxLevel: 40,
+    name: 'Runic',
+  },
+  {
+    minLevel: 41,
+    maxLevel: 50,
+    name: 'Relic',
+  },
+  {
+    minLevel: 51,
+    maxLevel: 60,
+    name: 'Frostborn',
+  },
+  {
+    minLevel: 61,
+    maxLevel: 70,
+    name: 'Infernal',
+  },
+  {
+    minLevel: 71,
+    maxLevel: 80,
+    name: 'Celestial',
+  },
+  {
+    minLevel: 81,
+    maxLevel: 90,
+    name: 'Abyssal',
+  },
+  {
+    minLevel: 91,
+    maxLevel: 100,
+    name: 'Draconic',
   },
 ]
 
@@ -382,6 +441,21 @@ export function getEquipmentFamily(
     ) ??
     EQUIPMENT_FAMILIES[
       EQUIPMENT_FAMILIES.length - 1
+    ]
+  )
+}
+
+export function getAccessoryFamily(
+  level: number,
+): AccessoryFamily {
+  return (
+    ACCESSORY_FAMILIES.find(
+      (family) =>
+        level >= family.minLevel &&
+        level <= family.maxLevel,
+    ) ??
+    ACCESSORY_FAMILIES[
+      ACCESSORY_FAMILIES.length - 1
     ]
   )
 }

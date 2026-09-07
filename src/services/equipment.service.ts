@@ -4,6 +4,7 @@ import { ITEM_CONFIG } from '../config/item.config'
 import {
   ACCESSORY_EQUIPMENT,
   CLASS_EQUIPMENT,
+  getAccessoryFamily,
   getEquipmentFamily,
   type EquipmentDefinition,
 } from '../data/items'
@@ -147,8 +148,7 @@ function calculateMainStat(
 
   return Math.floor(
     baseCombatStat *
-      rarityConfig
-        .mainStatMultiplier *
+      rarityConfig.mainStatMultiplier *
       qualityMultiplier,
   )
 }
@@ -176,19 +176,16 @@ function rollAffixValue(
   const baseBonus =
     ITEM_CONFIG.affix.baseBonus +
     itemLevel *
-      ITEM_CONFIG.affix
-        .growthPerLevel
+      ITEM_CONFIG.affix.growthPerLevel
 
   const minBonus = Math.floor(
     baseBonus *
-      rarityConfig
-        .affixMinMultiplier,
+      rarityConfig.affixMinMultiplier,
   )
 
   const maxBonus = Math.ceil(
     baseBonus *
-      rarityConfig
-        .affixMaxMultiplier,
+      rarityConfig.affixMaxMultiplier,
   )
 
   return randomInt(
@@ -202,11 +199,9 @@ function rollAffixes(
   rarity: EquipmentRarity,
 ): EquipmentAffix[] {
   const affixCount =
-    ITEM_CONFIG.rarity[rarity]
-      .affixCount
+    ITEM_CONFIG.rarity[rarity].affixCount
 
-  const affixes:
-    EquipmentAffix[] = []
+  const affixes: EquipmentAffix[] = []
 
   for (
     let index = 0;
@@ -214,14 +209,16 @@ function rollAffixes(
     index += 1
   ) {
     affixes.push({
-      stat: randomArrayItem(
-        BASE_STATS,
-      ),
+      stat:
+        randomArrayItem(
+          BASE_STATS,
+        ),
 
-      value: rollAffixValue(
-        itemLevel,
-        rarity,
-      ),
+      value:
+        rollAffixValue(
+          itemLevel,
+          rarity,
+        ),
     })
   }
 
@@ -233,6 +230,17 @@ function createEquipmentName(
   itemClass: CharacterClass,
   itemLevel: number,
 ): string {
+  if (
+    definition.requiredClass === null
+  ) {
+    const family =
+      getAccessoryFamily(
+        itemLevel,
+      )
+
+    return `${family.name} ${definition.suffix}`
+  }
+
   const family =
     getEquipmentFamily(
       itemLevel,
@@ -260,13 +268,15 @@ export function generateEquipment(
     rollEquipmentDefinition()
 
   return {
-    id: createEquipmentId(),
+    id:
+      createEquipmentId(),
 
-    name: createEquipmentName(
-      definition,
-      itemClass,
-      itemLevel,
-    ),
+    name:
+      createEquipmentName(
+        definition,
+        itemClass,
+        itemLevel,
+      ),
 
     type:
       definition.type,

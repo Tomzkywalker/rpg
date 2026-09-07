@@ -14,9 +14,59 @@ import {
     type GameSaveData,
 } from '../services/save.service'
 
+import {
+    rollEquipmentDrop,
+} from '../services/equipment.service'
+
+import {
+    useInventoryStore,
+    type InventorySort,
+} from './inventory'
+
+import type {
+    CharacterClass,
+    Equipment,
+    EquipmentRarity,
+} from '../types/equipment'
+
+interface ExtendedInventorySaveData {
+    items: Equipment[]
+    capacity: number
+    sortMode: InventorySort
+
+    autoSell: {
+        enabled: boolean
+
+        sellBelowLevelEnabled: boolean
+        sellBelowLevel: number
+
+        sellBelowRarityEnabled: boolean
+        minimumRarity: EquipmentRarity
+
+        sellOtherClasses: boolean
+    }
+}
+
+type ExtendedGameSaveData = GameSaveData & {
+    characterClass?: CharacterClass
+    inventory?: ExtendedInventorySaveData
+}
+
 export const useGameStore = defineStore('game', () => {
-    const level = ref<number>(LEVELING_CONFIG.initialLevel)
-    const exp = ref<number>(LEVELING_CONFIG.initialExp)
+    const inventory = useInventoryStore()
+
+    const characterClass =
+        ref<CharacterClass>('warrior')
+
+    const level =
+        ref<number>(
+            LEVELING_CONFIG.initialLevel,
+        )
+
+    const exp =
+        ref<number>(
+            LEVELING_CONFIG.initialExp,
+        )
 
     // Nilai awal sementara.
     // Saat initializeGame(), HP/MP akan disesuaikan dengan Max HP/MP
@@ -30,227 +80,464 @@ export const useGameStore = defineStore('game', () => {
     const deaths = ref(0)
 
     const selectedMapId = ref(1)
-    const currentMonster = ref<Monster | null>(null)
+
+    const currentMonster =
+        ref<Monster | null>(null)
+
     const monsterHp = ref(0)
 
-    const isAutoHunting = ref(false)
-    const isFighting = ref(false)
-    const isLoaded = ref(false)
+    const isAutoHunting =
+        ref(false)
 
-    const battleLog = ref<string[]>([])
+    const isFighting =
+        ref(false)
 
-    let playerAttackTimer: ReturnType<typeof setTimeout> | null = null
-    let monsterAttackTimer: ReturnType<typeof setTimeout> | null = null
-    let nextActionTimer: ReturnType<typeof setTimeout> | null = null
+    const isLoaded =
+        ref(false)
+
+    const battleLog =
+        ref<string[]>([])
+
+    let playerAttackTimer:
+        ReturnType<typeof setTimeout> | null =
+        null
+
+    let monsterAttackTimer:
+        ReturnType<typeof setTimeout> | null =
+        null
+
+    let nextActionTimer:
+        ReturnType<typeof setTimeout> | null =
+        null
 
     const stats = ref({
-        STR: Number(STATS_CONFIG.initial.STR),
-        AGI: Number(STATS_CONFIG.initial.AGI),
-        VIT: Number(STATS_CONFIG.initial.VIT),
-        INT: Number(STATS_CONFIG.initial.INT),
-        DEX: Number(STATS_CONFIG.initial.DEX),
-        LUK: Number(STATS_CONFIG.initial.LUK),
+        STR: Number(
+            STATS_CONFIG.initial.STR,
+        ),
+
+        AGI: Number(
+            STATS_CONFIG.initial.AGI,
+        ),
+
+        VIT: Number(
+            STATS_CONFIG.initial.VIT,
+        ),
+
+        INT: Number(
+            STATS_CONFIG.initial.INT,
+        ),
+
+        DEX: Number(
+            STATS_CONFIG.initial.DEX,
+        ),
+
+        LUK: Number(
+            STATS_CONFIG.initial.LUK,
+        ),
     })
 
     const maxHp = computed(() => {
-        const config = STATS_CONFIG.hp
+        const config =
+            STATS_CONFIG.hp
 
         return (
             config.base +
-            stats.value.VIT * config.perVit +
-            level.value * config.perLevel
+            stats.value.VIT *
+                config.perVit +
+            level.value *
+                config.perLevel
         )
     })
 
     const maxMp = computed(() => {
-        const config = STATS_CONFIG.mp
+        const config =
+            STATS_CONFIG.mp
 
         return (
             config.base +
-            stats.value.INT * config.perInt +
-            level.value * config.perLevel
+            stats.value.INT *
+                config.perInt +
+            level.value *
+                config.perLevel
         )
     })
 
     const attack = computed(() => {
-        const config = STATS_CONFIG.attack
+        const config =
+            STATS_CONFIG.attack
 
         return Math.round(
             config.base +
-            stats.value.STR * config.perStr +
-            level.value * config.perLevel,
+                stats.value.STR *
+                    config.perStr +
+                level.value *
+                    config.perLevel,
         )
     })
 
     const defense = computed(() => {
-        const config = STATS_CONFIG.defense
+        const config =
+            STATS_CONFIG.defense
 
         return Math.floor(
-            stats.value.VIT * config.perVit +
-            level.value * config.perLevel,
+            stats.value.VIT *
+                config.perVit +
+                level.value *
+                    config.perLevel,
         )
     })
 
     const magicAttack = computed(() => {
-        const config = STATS_CONFIG.magicAttack
+        const config =
+            STATS_CONFIG.magicAttack
 
         return Math.round(
             config.base +
-            stats.value.INT * config.perInt +
-            level.value * config.perLevel,
+                stats.value.INT *
+                    config.perInt +
+                level.value *
+                    config.perLevel,
         )
     })
 
-    const magicDefense = computed(() => {
-        const config = STATS_CONFIG.magicDefense
+    const magicDefense =
+        computed(() => {
+            const config =
+                STATS_CONFIG.magicDefense
 
-        return Math.floor(
-            stats.value.INT * config.perInt +
-            stats.value.VIT * config.perVit +
-            level.value * config.perLevel,
-        )
-    })
+            return Math.floor(
+                stats.value.INT *
+                    config.perInt +
+                    stats.value.VIT *
+                        config.perVit +
+                    level.value *
+                        config.perLevel,
+            )
+        })
 
     const hit = computed(() => {
-        const config = STATS_CONFIG.hit
+        const config =
+            STATS_CONFIG.hit
 
         return Math.round(
             config.base +
-            stats.value.DEX * config.perDex +
-            level.value * config.perLevel,
+                stats.value.DEX *
+                    config.perDex +
+                level.value *
+                    config.perLevel,
         )
     })
 
     const flee = computed(() => {
-        const config = STATS_CONFIG.flee
+        const config =
+            STATS_CONFIG.flee
 
         return Math.round(
             config.base +
-            stats.value.AGI * config.perAgi +
-            level.value * config.perLevel,
+                stats.value.AGI *
+                    config.perAgi +
+                level.value *
+                    config.perLevel,
         )
     })
 
-    const criticalChance = computed(() => {
-        const config = STATS_CONFIG.critical
+    const criticalChance =
+        computed(() => {
+            const config =
+                STATS_CONFIG.critical
 
-        return Math.min(
-            config.max,
-            config.base +
-            stats.value.LUK * config.perLuk,
-        )
-    })
-
-    const attackSpeed = computed(() => {
-        const config = STATS_CONFIG.attackSpeed
-
-        return Math.min(
-            config.max,
-            Math.round(
+            return Math.min(
+                config.max,
                 config.base +
-                stats.value.AGI * config.perAgi +
-                stats.value.DEX * config.perDex,
-            ),
+                    stats.value.LUK *
+                        config.perLuk,
+            )
+        })
+
+    const attackSpeed =
+        computed(() => {
+            const config =
+                STATS_CONFIG.attackSpeed
+
+            return Math.min(
+                config.max,
+
+                Math.round(
+                    config.base +
+                        stats.value.AGI *
+                            config.perAgi +
+                        stats.value.DEX *
+                            config.perDex,
+                ),
+            )
+        })
+
+    const playerAttackInterval =
+        computed(() => {
+            const config =
+                COMBAT_CONFIG
+                    .playerAttackInterval
+
+            const reduction =
+                (attackSpeed.value -
+                    STATS_CONFIG
+                        .attackSpeed
+                        .base) *
+                config.reductionPerAspd
+
+            return Math.max(
+                config.minimumMs,
+                config.baseMs -
+                    reduction,
+            )
+        })
+
+    const expNeeded =
+        computed(() => {
+            return Math.round(
+                LEVELING_CONFIG
+                    .exp.base *
+                    Math.pow(
+                        LEVELING_CONFIG
+                            .exp.growth,
+
+                        level.value - 1,
+                    ),
+            )
+        })
+
+    const selectedMap =
+        computed(() => {
+            return (
+                maps.find(
+                    (map) =>
+                        map.id ===
+                        selectedMapId.value,
+                ) ??
+                maps[0]
+            )
+        })
+
+    function addLog(
+        message: string,
+    ) {
+        battleLog.value.unshift(
+            message,
         )
-    })
-
-    const playerAttackInterval = computed(() => {
-        const config = COMBAT_CONFIG.playerAttackInterval
-
-        const reduction =
-            (attackSpeed.value - STATS_CONFIG.attackSpeed.base) *
-            config.reductionPerAspd
-
-        return Math.max(
-            config.minimumMs,
-            config.baseMs - reduction,
-        )
-    })
-
-    const expNeeded = computed(() => {
-        return Math.round(
-            LEVELING_CONFIG.exp.base *
-            Math.pow(
-                LEVELING_CONFIG.exp.growth,
-                level.value - 1,
-            ),
-        )
-    })
-
-    const selectedMap = computed(() => {
-        return (
-            maps.find(
-                (map) => map.id === selectedMapId.value,
-            ) ?? maps[0]
-        )
-    })
-
-    function addLog(message: string) {
-        battleLog.value.unshift(message)
 
         if (
             battleLog.value.length >
-            COMBAT_CONFIG.battleLogMaxEntries
+            COMBAT_CONFIG
+                .battleLogMaxEntries
         ) {
             battleLog.value.pop()
         }
     }
 
-    function getSaveData(): GameSaveData {
+    function getSaveData():
+        ExtendedGameSaveData {
         return {
-            level: level.value,
-            exp: exp.value,
-            hp: hp.value,
-            mp: mp.value,
-            gold: gold.value,
-            statusPoints: statusPoints.value,
-            kills: kills.value,
-            deaths: deaths.value,
-            selectedMapId: selectedMapId.value,
-            stats: { ...stats.value },
+            level:
+                level.value,
+
+            exp:
+                exp.value,
+
+            hp:
+                hp.value,
+
+            mp:
+                mp.value,
+
+            gold:
+                gold.value,
+
+            statusPoints:
+                statusPoints.value,
+
+            kills:
+                kills.value,
+
+            deaths:
+                deaths.value,
+
+            selectedMapId:
+                selectedMapId.value,
+
+            stats: {
+                ...stats.value,
+            },
+
+            characterClass:
+                characterClass.value,
+
+            inventory: {
+                items:
+                    inventory.items.map(
+                        (item) => ({
+                            ...item,
+
+                            affixes:
+                                item.affixes.map(
+                                    (affix) => ({
+                                        ...affix,
+                                    }),
+                                ),
+                        }),
+                    ),
+
+                capacity:
+                    inventory.capacity,
+
+                sortMode:
+                    inventory.sortMode,
+
+                autoSell: {
+                    ...inventory.autoSell,
+                },
+            },
         }
     }
 
     async function persistGame() {
         try {
-            await saveGame(getSaveData())
+            await saveGame(
+                getSaveData(),
+            )
         } catch (error) {
-            console.error('Failed to save game:', error)
+            console.error(
+                'Failed to save game:',
+                error,
+            )
         }
     }
 
     async function initializeGame() {
         try {
-            const save = await loadGame()
+            const save =
+                (await loadGame()) as
+                    ExtendedGameSaveData | null
 
             if (save) {
-                level.value = save.level
-                exp.value = save.exp
-                gold.value = save.gold
-                statusPoints.value = save.statusPoints
-                kills.value = save.kills
-                deaths.value = save.deaths
-                selectedMapId.value = save.selectedMapId
-                stats.value = { ...save.stats }
+                level.value =
+                    save.level
 
-                hp.value = Math.min(
-                    save.hp,
-                    maxHp.value,
+                exp.value =
+                    save.exp
+
+                gold.value =
+                    save.gold
+
+                statusPoints.value =
+                    save.statusPoints
+
+                kills.value =
+                    save.kills
+
+                deaths.value =
+                    save.deaths
+
+                selectedMapId.value =
+                    save.selectedMapId
+
+                stats.value = {
+                    ...save.stats,
+                }
+
+                characterClass.value =
+                    save.characterClass ??
+                    'warrior'
+
+                if (
+                    save.inventory
+                ) {
+                    inventory.setItems(
+                        save.inventory
+                            .items ??
+                            [],
+                    )
+
+                    inventory.setCapacity(
+                        save.inventory
+                            .capacity,
+                    )
+
+                    inventory.setSortMode(
+                        save.inventory
+                            .sortMode ??
+                            'rarityDesc',
+                    )
+
+                    inventory
+                        .setAutoSellEnabled(
+                            save.inventory
+                                .autoSell
+                                ?.enabled ??
+                                false,
+                        )
+
+                    inventory
+                        .setSellBelowLevel(
+                            save.inventory
+                                .autoSell
+                                ?.sellBelowLevelEnabled ??
+                                false,
+
+                            save.inventory
+                                .autoSell
+                                ?.sellBelowLevel ??
+                                1,
+                        )
+
+                    inventory
+                        .setMinimumRarity(
+                            save.inventory
+                                .autoSell
+                                ?.sellBelowRarityEnabled ??
+                                false,
+
+                            save.inventory
+                                .autoSell
+                                ?.minimumRarity ??
+                                'common',
+                        )
+
+                    inventory
+                        .setSellOtherClasses(
+                            save.inventory
+                                .autoSell
+                                ?.sellOtherClasses ??
+                                false,
+                        )
+                }
+
+                hp.value =
+                    Math.min(
+                        save.hp,
+                        maxHp.value,
+                    )
+
+                mp.value =
+                    Math.min(
+                        save.mp,
+                        maxMp.value,
+                    )
+
+                addLog(
+                    'Save game berhasil dimuat.',
                 )
-
-                mp.value = Math.min(
-                    save.mp,
-                    maxMp.value,
-                )
-
-                addLog('Save game berhasil dimuat.')
             } else {
-                hp.value = maxHp.value
-                mp.value = maxMp.value
+                hp.value =
+                    maxHp.value
+
+                mp.value =
+                    maxMp.value
 
                 await persistGame()
 
-                addLog('Game baru dibuat.')
+                addLog(
+                    'Game baru dibuat.',
+                )
             }
         } catch (error) {
             console.error(
@@ -258,35 +545,53 @@ export const useGameStore = defineStore('game', () => {
                 error,
             )
 
-            hp.value = maxHp.value
-            mp.value = maxMp.value
+            hp.value =
+                maxHp.value
+
+            mp.value =
+                maxMp.value
 
             addLog(
                 'Save gagal dimuat. Game berjalan dengan data baru.',
             )
         } finally {
-            isLoaded.value = true
+            isLoaded.value =
+                true
         }
     }
 
-    async function addExp(amount: number) {
-        if (amount <= 0) return
+    async function addExp(
+        amount: number,
+    ) {
+        if (amount <= 0) {
+            return
+        }
 
-        exp.value += amount
+        exp.value +=
+            amount
 
         while (
-            exp.value >= expNeeded.value
+            exp.value >=
+            expNeeded.value
         ) {
-            const requiredExp = expNeeded.value
+            const requiredExp =
+                expNeeded.value
 
-            exp.value -= requiredExp
-            level.value += 1
+            exp.value -=
+                requiredExp
+
+            level.value +=
+                1
 
             statusPoints.value +=
-                LEVELING_CONFIG.statusPointsPerLevel
+                LEVELING_CONFIG
+                    .statusPointsPerLevel
 
-            hp.value = maxHp.value
-            mp.value = maxMp.value
+            hp.value =
+                maxHp.value
+
+            mp.value =
+                maxMp.value
 
             addLog(
                 `LEVEL UP! Kamu sekarang Level ${level.value}.`,
@@ -297,53 +602,90 @@ export const useGameStore = defineStore('game', () => {
     }
 
     async function addStat(
-        stat: keyof typeof stats.value,
+        stat:
+            keyof typeof stats.value,
     ) {
-        if (statusPoints.value <= 0) return
-
-        stats.value[stat] +=
-            LEVELING_CONFIG.statIncreasePerPoint
-
-        statusPoints.value -= 1
-
-        if (stat === 'VIT') {
-            hp.value = Math.min(
-                hp.value + STATS_CONFIG.hp.perVit,
-                maxHp.value,
-            )
+        if (
+            statusPoints.value <= 0
+        ) {
+            return
         }
 
-        if (stat === 'INT') {
-            mp.value = Math.min(
-                mp.value + STATS_CONFIG.mp.perInt,
-                maxMp.value,
-            )
+        stats.value[stat] +=
+            LEVELING_CONFIG
+                .statIncreasePerPoint
+
+        statusPoints.value -=
+            1
+
+        if (
+            stat === 'VIT'
+        ) {
+            hp.value =
+                Math.min(
+                    hp.value +
+                        STATS_CONFIG
+                            .hp.perVit,
+
+                    maxHp.value,
+                )
+        }
+
+        if (
+            stat === 'INT'
+        ) {
+            mp.value =
+                Math.min(
+                    mp.value +
+                        STATS_CONFIG
+                            .mp.perInt,
+
+                    maxMp.value,
+                )
         }
 
         await persistGame()
     }
 
-    async function selectMap(mapId: number) {
-        if (isAutoHunting.value) return
+    async function selectMap(
+        mapId: number,
+    ) {
+        if (
+            isAutoHunting.value
+        ) {
+            return
+        }
 
-        selectedMapId.value = mapId
-        currentMonster.value = null
-        monsterHp.value = 0
-        battleLog.value = []
+        selectedMapId.value =
+            mapId
+
+        currentMonster.value =
+            null
+
+        monsterHp.value =
+            0
+
+        battleLog.value =
+            []
 
         await persistGame()
     }
 
     function createCurrentMonster() {
-        const map = selectedMap.value
+        const map =
+            selectedMap.value
 
-        const monster = createMonster(
-            map.minLevel,
-            map.maxLevel,
-        )
+        const monster =
+            createMonster(
+                map.minLevel,
+                map.maxLevel,
+            )
 
-        currentMonster.value = monster
-        monsterHp.value = monster.maxHp
+        currentMonster.value =
+            monster
+
+        monsterHp.value =
+            monster.maxHp
 
         addLog(
             `Lv.${monster.level} ${monster.name} ditemukan.`,
@@ -354,15 +696,19 @@ export const useGameStore = defineStore('game', () => {
         monster: Monster,
     ) {
         const config =
-            COMBAT_CONFIG.hitChance
+            COMBAT_CONFIG
+                .hitChance
 
         return Math.max(
             config.min,
+
             Math.min(
                 config.max,
+
                 config.base +
-                (hit.value - monster.flee) *
-                config.statDifferenceMultiplier,
+                    (hit.value -
+                        monster.flee) *
+                        config.statDifferenceMultiplier,
             ),
         )
     }
@@ -371,46 +717,59 @@ export const useGameStore = defineStore('game', () => {
         monster: Monster,
     ) {
         const config =
-            COMBAT_CONFIG.hitChance
+            COMBAT_CONFIG
+                .hitChance
 
         return Math.max(
             config.min,
+
             Math.min(
                 config.max,
+
                 config.base +
-                (monster.hit - flee.value) *
-                config.statDifferenceMultiplier,
+                    (monster.hit -
+                        flee.value) *
+                        config.statDifferenceMultiplier,
             ),
         )
     }
 
     function calculatePlayerDamage() {
         const damageConfig =
-            COMBAT_CONFIG.playerDamage
+            COMBAT_CONFIG
+                .playerDamage
 
         const randomBonus =
             Math.floor(
                 Math.random() *
-                (damageConfig.randomBonusMax + 1),
+                    (damageConfig
+                        .randomBonusMax +
+                        1),
             )
 
         const isCritical =
             Math.random() <
-            criticalChance.value / 100
+            criticalChance.value /
+                100
 
         const rawDamage =
-            attack.value + randomBonus
+            attack.value +
+            randomBonus
 
         return {
-            damage: Math.max(
-                damageConfig.min,
-                Math.round(
-                    rawDamage *
-                    (isCritical
-                        ? COMBAT_CONFIG.criticalDamageMultiplier
-                        : 1),
+            damage:
+                Math.max(
+                    damageConfig.min,
+
+                    Math.round(
+                        rawDamage *
+                            (isCritical
+                                ? COMBAT_CONFIG
+                                    .criticalDamageMultiplier
+                                : 1),
+                    ),
                 ),
-            ),
+
             isCritical,
         }
     }
@@ -419,74 +778,153 @@ export const useGameStore = defineStore('game', () => {
         monster: Monster,
     ) {
         const damageConfig =
-            COMBAT_CONFIG.monsterDamage
+            COMBAT_CONFIG
+                .monsterDamage
 
         const randomBonus =
             Math.floor(
                 Math.random() *
-                (damageConfig.randomBonusMax + 1),
+                    (damageConfig
+                        .randomBonusMax +
+                        1),
             )
 
         return Math.max(
             damageConfig.min,
+
             monster.attack -
-            defense.value +
-            randomBonus,
+                defense.value +
+                randomBonus,
         )
     }
 
     function clearCombatTimers() {
-        if (playerAttackTimer) {
-            clearTimeout(playerAttackTimer)
-            playerAttackTimer = null
+        if (
+            playerAttackTimer
+        ) {
+            clearTimeout(
+                playerAttackTimer,
+            )
+
+            playerAttackTimer =
+                null
         }
 
-        if (monsterAttackTimer) {
-            clearTimeout(monsterAttackTimer)
-            monsterAttackTimer = null
+        if (
+            monsterAttackTimer
+        ) {
+            clearTimeout(
+                monsterAttackTimer,
+            )
+
+            monsterAttackTimer =
+                null
         }
 
-        isFighting.value = false
+        isFighting.value =
+            false
     }
 
     function clearNextActionTimer() {
-        if (nextActionTimer) {
-            clearTimeout(nextActionTimer)
-            nextActionTimer = null
+        if (
+            nextActionTimer
+        ) {
+            clearTimeout(
+                nextActionTimer,
+            )
+
+            nextActionTimer =
+                null
         }
     }
 
     function scheduleNextMonster(
-        delay: number = COMBAT_CONFIG.nextMonsterDelayMs,
+        delay: number =
+            COMBAT_CONFIG
+                .nextMonsterDelayMs,
     ) {
-        if (!isAutoHunting.value) return
+        if (
+            !isAutoHunting.value
+        ) {
+            return
+        }
 
         clearNextActionTimer()
 
-        nextActionTimer = setTimeout(() => {
-            if (!isAutoHunting.value) return
+        nextActionTimer =
+            setTimeout(
+                () => {
+                    if (
+                        !isAutoHunting
+                            .value
+                    ) {
+                        return
+                    }
 
-            createCurrentMonster()
-            startCombat()
-        }, delay)
+                    createCurrentMonster()
+                    startCombat()
+                },
+                delay,
+            )
     }
 
     async function playerWins() {
         const monster =
             currentMonster.value
 
-        if (!monster) return
+        if (!monster) {
+            return
+        }
 
         clearCombatTimers()
 
-        kills.value += 1
-        gold.value += monster.gold
+        kills.value +=
+            1
+
+        gold.value +=
+            monster.gold
 
         addLog(
             `${monster.name} dikalahkan! +${monster.exp} EXP, +${monster.gold} Gold.`,
         )
 
-        await addExp(monster.exp)
+        const equipment =
+            rollEquipmentDrop(
+                monster.level,
+            )
+
+        if (equipment) {
+            const result =
+                inventory.addItem(
+                    equipment,
+                    characterClass.value,
+                )
+
+            if (
+                result.autoSold
+            ) {
+                gold.value +=
+                    result.goldEarned
+
+                addLog(
+                    `DROP: ${equipment.name} [${equipment.rarity.toUpperCase()}] Q${equipment.quality} auto-sold +${result.goldEarned} Gold.`,
+                )
+            } else if (
+                result.inventoryFull
+            ) {
+                addLog(
+                    `DROP: ${equipment.name} tidak masuk karena inventory penuh.`,
+                )
+            } else {
+                addLog(
+                    `DROP: ${equipment.name} [${equipment.rarity.toUpperCase()}] Q${equipment.quality}.`,
+                )
+            }
+        }
+
+        await addExp(
+            monster.exp,
+        )
 
         scheduleNextMonster()
     }
@@ -494,25 +932,38 @@ export const useGameStore = defineStore('game', () => {
     async function playerDies() {
         clearCombatTimers()
 
-        deaths.value += 1
+        deaths.value +=
+            1
 
-        const expPenalty = Math.ceil(
-            expNeeded.value *
-            LEVELING_CONFIG.death.expPenaltyRate,
-        )
+        const expPenalty =
+            Math.ceil(
+                expNeeded.value *
+                    LEVELING_CONFIG
+                        .death
+                        .expPenaltyRate,
+            )
 
-        const actualExpLost = Math.min(
-            exp.value,
-            expPenalty,
-        )
+        const actualExpLost =
+            Math.min(
+                exp.value,
+                expPenalty,
+            )
 
-        exp.value = Math.max(
-            LEVELING_CONFIG.death.minimumExp,
-            exp.value - expPenalty,
-        )
+        exp.value =
+            Math.max(
+                LEVELING_CONFIG
+                    .death
+                    .minimumExp,
 
-        hp.value = maxHp.value
-        mp.value = maxMp.value
+                exp.value -
+                    expPenalty,
+            )
+
+        hp.value =
+            maxHp.value
+
+        mp.value =
+            maxMp.value
 
         addLog(
             `Kamu kalah. Kehilangan ${actualExpLost} EXP dan respawn otomatis. Total death: ${deaths.value}.`,
@@ -521,7 +972,8 @@ export const useGameStore = defineStore('game', () => {
         await persistGame()
 
         scheduleNextMonster(
-            COMBAT_CONFIG.deathRespawnDelayMs,
+            COMBAT_CONFIG
+                .deathRespawnDelayMs,
         )
     }
 
@@ -538,7 +990,9 @@ export const useGameStore = defineStore('game', () => {
         }
 
         const hitChance =
-            calculatePlayerHitChance(monster)
+            calculatePlayerHitChance(
+                monster,
+            )
 
         if (
             Math.random() * 100 >
@@ -551,14 +1005,18 @@ export const useGameStore = defineStore('game', () => {
             const playerAttack =
                 calculatePlayerDamage()
 
-            monsterHp.value = Math.max(
-                0,
-                monsterHp.value -
-                playerAttack.damage,
-            )
+            monsterHp.value =
+                Math.max(
+                    0,
+
+                    monsterHp.value -
+                        playerAttack
+                            .damage,
+                )
 
             addLog(
-                playerAttack.isCritical
+                playerAttack
+                    .isCritical
                     ? `CRITICAL! Kamu memberikan ${playerAttack.damage} damage.`
                     : `Kamu memberikan ${playerAttack.damage} damage.`,
             )
@@ -575,12 +1033,15 @@ export const useGameStore = defineStore('game', () => {
             isAutoHunting.value &&
             isFighting.value
         ) {
-            playerAttackTimer = setTimeout(
-                () => {
-                    void playerAttackTick()
-                },
-                playerAttackInterval.value,
-            )
+            playerAttackTimer =
+                setTimeout(
+                    () => {
+                        void playerAttackTick()
+                    },
+
+                    playerAttackInterval
+                        .value,
+                )
         }
     }
 
@@ -614,16 +1075,21 @@ export const useGameStore = defineStore('game', () => {
                     monster,
                 )
 
-            hp.value = Math.max(
-                0,
-                hp.value - monsterDamage,
-            )
+            hp.value =
+                Math.max(
+                    0,
+
+                    hp.value -
+                        monsterDamage,
+                )
 
             addLog(
                 `${monster.name} memberikan ${monsterDamage} damage.`,
             )
 
-            if (hp.value <= 0) {
+            if (
+                hp.value <= 0
+            ) {
                 await playerDies()
                 return
             }
@@ -633,12 +1099,15 @@ export const useGameStore = defineStore('game', () => {
             isAutoHunting.value &&
             isFighting.value
         ) {
-            monsterAttackTimer = setTimeout(
-                () => {
-                    void monsterAttackTick()
-                },
-                COMBAT_CONFIG.monsterAttackIntervalMs,
-            )
+            monsterAttackTimer =
+                setTimeout(
+                    () => {
+                        void monsterAttackTick()
+                    },
+
+                    COMBAT_CONFIG
+                        .monsterAttackIntervalMs,
+                )
         }
     }
 
@@ -651,16 +1120,22 @@ export const useGameStore = defineStore('game', () => {
             return
         }
 
-        isFighting.value = true
+        isFighting.value =
+            true
 
         void playerAttackTick()
         void monsterAttackTick()
     }
 
     function startAutoHunt() {
-        if (isAutoHunting.value) return
+        if (
+            isAutoHunting.value
+        ) {
+            return
+        }
 
-        isAutoHunting.value = true
+        isAutoHunting.value =
+            true
 
         addLog(
             `Auto Hunt dimulai di ${selectedMap.value.name}.`,
@@ -671,15 +1146,23 @@ export const useGameStore = defineStore('game', () => {
     }
 
     async function stopAutoHunt() {
-        if (!isAutoHunting.value) return
+        if (
+            !isAutoHunting.value
+        ) {
+            return
+        }
 
-        isAutoHunting.value = false
+        isAutoHunting.value =
+            false
 
         clearCombatTimers()
         clearNextActionTimer()
 
-        currentMonster.value = null
-        monsterHp.value = 0
+        currentMonster.value =
+            null
+
+        monsterHp.value =
+            0
 
         addLog(
             'Auto Hunt dihentikan.',
@@ -689,14 +1172,187 @@ export const useGameStore = defineStore('game', () => {
     }
 
     async function rest() {
-        if (isAutoHunting.value) return
+        if (
+            isAutoHunting.value
+        ) {
+            return
+        }
 
-        hp.value = maxHp.value
-        mp.value = maxMp.value
+        hp.value =
+            maxHp.value
+
+        mp.value =
+            maxMp.value
 
         addLog(
             'HP dan MP dipulihkan.',
         )
+
+        await persistGame()
+    }
+
+    async function setCharacterClass(
+        newClass: CharacterClass,
+    ) {
+        if (
+            isAutoHunting.value
+        ) {
+            return
+        }
+
+        if (
+            characterClass.value ===
+            newClass
+        ) {
+            return
+        }
+
+        characterClass.value =
+            newClass
+
+        addLog(
+            `Job diubah menjadi ${newClass}.`,
+        )
+
+        await persistGame()
+    }
+
+    async function toggleInventoryItemLock(
+        itemId: string,
+    ) {
+        const changed =
+            inventory
+                .toggleItemLock(
+                    itemId,
+                )
+
+        if (!changed) {
+            return
+        }
+
+        await persistGame()
+    }
+
+    async function sellInventoryItem(
+        itemId: string,
+    ) {
+        const item =
+            inventory
+                .getItemById(
+                    itemId,
+                )
+
+        if (!item) {
+            return
+        }
+
+        const earned =
+            inventory.sellItem(
+                itemId,
+            )
+
+        if (
+            earned <= 0
+        ) {
+            return
+        }
+
+        gold.value +=
+            earned
+
+        addLog(
+            `${item.name} dijual +${earned} Gold.`,
+        )
+
+        await persistGame()
+    }
+
+    async function sellAllUnlockedItems() {
+        const earned =
+            inventory
+                .sellUnlockedItems()
+
+        if (
+            earned <= 0
+        ) {
+            return
+        }
+
+        gold.value +=
+            earned
+
+        addLog(
+            `Semua item unlocked dijual +${earned} Gold.`,
+        )
+
+        await persistGame()
+    }
+
+    async function setInventorySort(
+        mode: InventorySort,
+    ) {
+        inventory.setSortMode(
+            mode,
+        )
+
+        await persistGame()
+    }
+
+    async function setInventoryCapacity(
+        newCapacity: number,
+    ) {
+        inventory.setCapacity(
+            newCapacity,
+        )
+
+        await persistGame()
+    }
+
+    async function setAutoSellEnabled(
+        enabled: boolean,
+    ) {
+        inventory
+            .setAutoSellEnabled(
+                enabled,
+            )
+
+        await persistGame()
+    }
+
+    async function setAutoSellBelowLevel(
+        enabled: boolean,
+        minimumLevel: number,
+    ) {
+        inventory
+            .setSellBelowLevel(
+                enabled,
+                minimumLevel,
+            )
+
+        await persistGame()
+    }
+
+    async function setAutoSellMinimumRarity(
+        enabled: boolean,
+        rarity:
+            EquipmentRarity,
+    ) {
+        inventory
+            .setMinimumRarity(
+                enabled,
+                rarity,
+            )
+
+        await persistGame()
+    }
+
+    async function setAutoSellOtherClasses(
+        enabled: boolean,
+    ) {
+        inventory
+            .setSellOtherClasses(
+                enabled,
+            )
 
         await persistGame()
     }
@@ -707,9 +1363,13 @@ export const useGameStore = defineStore('game', () => {
         hp,
         mp,
         gold,
+
         statusPoints,
         kills,
         deaths,
+
+        characterClass,
+        inventory,
 
         selectedMapId,
         currentMonster,
@@ -727,10 +1387,13 @@ export const useGameStore = defineStore('game', () => {
 
         attack,
         defense,
+
         magicAttack,
         magicDefense,
+
         hit,
         flee,
+
         criticalChance,
         attackSpeed,
         playerAttackInterval,
@@ -739,10 +1402,28 @@ export const useGameStore = defineStore('game', () => {
         selectedMap,
 
         initializeGame,
+
         addStat,
+
         selectMap,
+
         startAutoHunt,
         stopAutoHunt,
+
         rest,
+
+        setCharacterClass,
+
+        toggleInventoryItemLock,
+        sellInventoryItem,
+        sellAllUnlockedItems,
+
+        setInventorySort,
+        setInventoryCapacity,
+
+        setAutoSellEnabled,
+        setAutoSellBelowLevel,
+        setAutoSellMinimumRarity,
+        setAutoSellOtherClasses,
     }
 })
