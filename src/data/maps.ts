@@ -1,3 +1,5 @@
+import { MAP_CONFIG } from '../config/map.config'
+
 export interface GameMap {
   id: number
   name: string
@@ -6,14 +8,54 @@ export interface GameMap {
 }
 
 export const maps: GameMap[] = [
-  { id: 1, name: 'Green Fields', minLevel: 1, maxLevel: 10 },
-  { id: 2, name: 'Dusty Canyon', minLevel: 11, maxLevel: 20 },
-  { id: 3, name: 'Blackwood Forest', minLevel: 21, maxLevel: 30 },
-  { id: 4, name: 'Sunken Ruins', minLevel: 31, maxLevel: 40 },
-  { id: 5, name: 'Ashen Valley', minLevel: 41, maxLevel: 50 },
-  { id: 6, name: 'Frostpeak', minLevel: 51, maxLevel: 60 },
-  { id: 7, name: 'Demon Marsh', minLevel: 61, maxLevel: 70 },
-  { id: 8, name: 'Sky Fortress', minLevel: 71, maxLevel: 80 },
-  { id: 9, name: 'Abyssal Depths', minLevel: 81, maxLevel: 90 },
-  { id: 10, name: 'Dragon Graveyard', minLevel: 91, maxLevel: 100 },
+  {
+    id: 1,
+    name: 'Green Fields',
+    ...MAP_CONFIG.greenFields,
+  },
+  {
+    id: 2,
+    name: 'Dusty Canyon',
+    ...MAP_CONFIG.dustyCanyon,
+  },
+  {
+    id: 3,
+    name: 'Blackwood Forest',
+    ...MAP_CONFIG.blackwoodForest,
+  },
+  {
+    id: 4,
+    name: 'Sunken Ruins',
+    ...MAP_CONFIG.sunkenRuins,
+  },
+  {
+    id: 5,
+    name: 'Ashen Valley',
+    ...MAP_CONFIG.ashenValley,
+  },
+  {
+    id: 6,
+    name: 'Frostpeak',
+    ...MAP_CONFIG.frostpeak,
+  },
+  {
+    id: 7,
+    name: 'Demon Marsh',
+    ...MAP_CONFIG.demonMarsh,
+  },
+  {
+    id: 8,
+    name: 'Sky Fortress',
+    ...MAP_CONFIG.skyFortress,
+  },
+  {
+    id: 9,
+    name: 'Abyssal Depths',
+    ...MAP_CONFIG.abyssalDepths,
+  },
+  {
+    id: 10,
+    name: 'Dragon Graveyard',
+    ...MAP_CONFIG.dragonGraveyard,
+  },
 ]

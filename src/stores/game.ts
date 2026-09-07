@@ -1,7 +1,13 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+
+import { STATS_CONFIG } from '../config/stats.config'
+import { LEVELING_CONFIG } from '../config/leveling.config'
+import { COMBAT_CONFIG } from '../config/combat.config'
+
 import { maps } from '../data/maps'
 import { createMonster, type Monster } from '../data/monsters'
+
 import {
     loadGame,
     saveGame,
@@ -9,15 +15,17 @@ import {
 } from '../services/save.service'
 
 export const useGameStore = defineStore('game', () => {
-    const level = ref(1)
-    const exp = ref(0)
+    const level = ref<number>(LEVELING_CONFIG.initialLevel)
+    const exp = ref<number>(LEVELING_CONFIG.initialExp)
 
-    const hp = ref(100)
-    const mp = ref(40)
+    // Nilai awal sementara.
+    // Saat initializeGame(), HP/MP akan disesuaikan dengan Max HP/MP
+    // atau save game yang tersedia.
+    const hp = ref(0)
+    const mp = ref(0)
 
     const gold = ref(0)
     const statusPoints = ref(0)
-
     const kills = ref(0)
     const deaths = ref(0)
 
@@ -36,111 +44,154 @@ export const useGameStore = defineStore('game', () => {
     let nextActionTimer: ReturnType<typeof setTimeout> | null = null
 
     const stats = ref({
-        STR: 5,
-        AGI: 5,
-        VIT: 5,
-        INT: 5,
-        DEX: 5,
-        LUK: 5,
+        STR: Number(STATS_CONFIG.initial.STR),
+        AGI: Number(STATS_CONFIG.initial.AGI),
+        VIT: Number(STATS_CONFIG.initial.VIT),
+        INT: Number(STATS_CONFIG.initial.INT),
+        DEX: Number(STATS_CONFIG.initial.DEX),
+        LUK: Number(STATS_CONFIG.initial.LUK),
     })
 
     const maxHp = computed(() => {
-        return 75 + stats.value.VIT * 5 + level.value * 3
+        const config = STATS_CONFIG.hp
+
+        return (
+            config.base +
+            stats.value.VIT * config.perVit +
+            level.value * config.perLevel
+        )
     })
 
     const maxMp = computed(() => {
-        return 25 + stats.value.INT * 3 + level.value
+        const config = STATS_CONFIG.mp
+
+        return (
+            config.base +
+            stats.value.INT * config.perInt +
+            level.value * config.perLevel
+        )
     })
 
     const attack = computed(() => {
+        const config = STATS_CONFIG.attack
+
         return Math.round(
-            9 +
-            stats.value.STR * 2.4 +
-            level.value * 0.8,
+            config.base +
+            stats.value.STR * config.perStr +
+            level.value * config.perLevel,
         )
     })
 
     const defense = computed(() => {
+        const config = STATS_CONFIG.defense
+
         return Math.floor(
-            stats.value.VIT * 0.55 +
-            level.value * 0.15,
+            stats.value.VIT * config.perVit +
+            level.value * config.perLevel,
         )
     })
 
     const magicAttack = computed(() => {
+        const config = STATS_CONFIG.magicAttack
+
         return Math.round(
-            5 +
-            stats.value.INT * 2.2 +
-            level.value * 0.7,
+            config.base +
+            stats.value.INT * config.perInt +
+            level.value * config.perLevel,
         )
     })
 
     const magicDefense = computed(() => {
+        const config = STATS_CONFIG.magicDefense
+
         return Math.floor(
-            stats.value.INT * 0.35 +
-            stats.value.VIT * 0.25 +
-            level.value * 0.15,
+            stats.value.INT * config.perInt +
+            stats.value.VIT * config.perVit +
+            level.value * config.perLevel,
         )
     })
 
     const hit = computed(() => {
+        const config = STATS_CONFIG.hit
+
         return Math.round(
-            75 +
-            stats.value.DEX * 2 +
-            level.value,
+            config.base +
+            stats.value.DEX * config.perDex +
+            level.value * config.perLevel,
         )
     })
 
     const flee = computed(() => {
+        const config = STATS_CONFIG.flee
+
         return Math.round(
-            5 +
-            stats.value.AGI * 1.5 +
-            level.value * 0.5,
+            config.base +
+            stats.value.AGI * config.perAgi +
+            level.value * config.perLevel,
         )
     })
 
     const criticalChance = computed(() => {
+        const config = STATS_CONFIG.critical
+
         return Math.min(
-            40,
-            5 + stats.value.LUK * 0.4,
+            config.max,
+            config.base +
+            stats.value.LUK * config.perLuk,
         )
     })
 
     const attackSpeed = computed(() => {
+        const config = STATS_CONFIG.attackSpeed
+
         return Math.min(
-            200,
+            config.max,
             Math.round(
-                100 +
-                stats.value.AGI * 1.5 +
-                stats.value.DEX * 0.3,
+                config.base +
+                stats.value.AGI * config.perAgi +
+                stats.value.DEX * config.perDex,
             ),
         )
     })
 
     const playerAttackInterval = computed(() => {
+        const config = COMBAT_CONFIG.playerAttackInterval
+
         const reduction =
-            (attackSpeed.value - 100) * 5
+            (attackSpeed.value - STATS_CONFIG.attackSpeed.base) *
+            config.reductionPerAspd
 
         return Math.max(
-            250,
-            1000 - reduction,
+            config.minimumMs,
+            config.baseMs - reduction,
         )
     })
 
     const expNeeded = computed(() => {
         return Math.round(
-            100 * Math.pow(1.34, level.value - 1),
+            LEVELING_CONFIG.exp.base *
+            Math.pow(
+                LEVELING_CONFIG.exp.growth,
+                level.value - 1,
+            ),
         )
     })
 
     const selectedMap = computed(() => {
-        return maps.find((map) => map.id === selectedMapId.value) ?? maps[0]
+        return (
+            maps.find(
+                (map) => map.id === selectedMapId.value,
+            ) ?? maps[0]
+        )
     })
 
     function addLog(message: string) {
         battleLog.value.unshift(message)
 
-        if (battleLog.value.length > 30) {
+        if (
+            battleLog.value.length >
+            COMBAT_CONFIG.battleLogMaxEntries
+        ) {
             battleLog.value.pop()
         }
     }
@@ -182,8 +233,15 @@ export const useGameStore = defineStore('game', () => {
                 selectedMapId.value = save.selectedMapId
                 stats.value = { ...save.stats }
 
-                hp.value = Math.min(save.hp, maxHp.value)
-                mp.value = Math.min(save.mp, maxMp.value)
+                hp.value = Math.min(
+                    save.hp,
+                    maxHp.value,
+                )
+
+                mp.value = Math.min(
+                    save.mp,
+                    maxMp.value,
+                )
 
                 addLog('Save game berhasil dimuat.')
             } else {
@@ -195,12 +253,17 @@ export const useGameStore = defineStore('game', () => {
                 addLog('Game baru dibuat.')
             }
         } catch (error) {
-            console.error('Failed to load game:', error)
+            console.error(
+                'Failed to load game:',
+                error,
+            )
 
             hp.value = maxHp.value
             mp.value = maxMp.value
 
-            addLog('Save gagal dimuat. Game berjalan dengan data baru.')
+            addLog(
+                'Save gagal dimuat. Game berjalan dengan data baru.',
+            )
         } finally {
             isLoaded.value = true
         }
@@ -211,12 +274,16 @@ export const useGameStore = defineStore('game', () => {
 
         exp.value += amount
 
-        while (exp.value >= expNeeded.value) {
+        while (
+            exp.value >= expNeeded.value
+        ) {
             const requiredExp = expNeeded.value
 
             exp.value -= requiredExp
             level.value += 1
-            statusPoints.value += 5
+
+            statusPoints.value +=
+                LEVELING_CONFIG.statusPointsPerLevel
 
             hp.value = maxHp.value
             mp.value = maxMp.value
@@ -229,22 +296,26 @@ export const useGameStore = defineStore('game', () => {
         await persistGame()
     }
 
-    async function addStat(stat: keyof typeof stats.value) {
+    async function addStat(
+        stat: keyof typeof stats.value,
+    ) {
         if (statusPoints.value <= 0) return
 
-        stats.value[stat] += 1
+        stats.value[stat] +=
+            LEVELING_CONFIG.statIncreasePerPoint
+
         statusPoints.value -= 1
 
         if (stat === 'VIT') {
             hp.value = Math.min(
-                hp.value + 5,
+                hp.value + STATS_CONFIG.hp.perVit,
                 maxHp.value,
             )
         }
 
         if (stat === 'INT') {
             mp.value = Math.min(
-                mp.value + 3,
+                mp.value + STATS_CONFIG.mp.perInt,
                 maxMp.value,
             )
         }
@@ -279,31 +350,49 @@ export const useGameStore = defineStore('game', () => {
         )
     }
 
-    function calculatePlayerHitChance(monster: Monster) {
+    function calculatePlayerHitChance(
+        monster: Monster,
+    ) {
+        const config =
+            COMBAT_CONFIG.hitChance
+
         return Math.max(
-            5,
+            config.min,
             Math.min(
-                95,
-                80 +
-                (hit.value - monster.flee) * 0.5,
+                config.max,
+                config.base +
+                (hit.value - monster.flee) *
+                config.statDifferenceMultiplier,
             ),
         )
     }
 
-    function calculateMonsterHitChance(monster: Monster) {
+    function calculateMonsterHitChance(
+        monster: Monster,
+    ) {
+        const config =
+            COMBAT_CONFIG.hitChance
+
         return Math.max(
-            5,
+            config.min,
             Math.min(
-                95,
-                80 +
-                (monster.hit - flee.value) * 0.5,
+                config.max,
+                config.base +
+                (monster.hit - flee.value) *
+                config.statDifferenceMultiplier,
             ),
         )
     }
 
     function calculatePlayerDamage() {
+        const damageConfig =
+            COMBAT_CONFIG.playerDamage
+
         const randomBonus =
-            Math.floor(Math.random() * 9)
+            Math.floor(
+                Math.random() *
+                (damageConfig.randomBonusMax + 1),
+            )
 
         const isCritical =
             Math.random() <
@@ -314,22 +403,32 @@ export const useGameStore = defineStore('game', () => {
 
         return {
             damage: Math.max(
-                1,
+                damageConfig.min,
                 Math.round(
                     rawDamage *
-                    (isCritical ? 1.7 : 1),
+                    (isCritical
+                        ? COMBAT_CONFIG.criticalDamageMultiplier
+                        : 1),
                 ),
             ),
             isCritical,
         }
     }
 
-    function calculateMonsterDamage(monster: Monster) {
+    function calculateMonsterDamage(
+        monster: Monster,
+    ) {
+        const damageConfig =
+            COMBAT_CONFIG.monsterDamage
+
         const randomBonus =
-            Math.floor(Math.random() * 6)
+            Math.floor(
+                Math.random() *
+                (damageConfig.randomBonusMax + 1),
+            )
 
         return Math.max(
-            1,
+            damageConfig.min,
             monster.attack -
             defense.value +
             randomBonus,
@@ -357,7 +456,9 @@ export const useGameStore = defineStore('game', () => {
         }
     }
 
-    function scheduleNextMonster(delay = 650) {
+    function scheduleNextMonster(
+        delay: number = COMBAT_CONFIG.nextMonsterDelayMs,
+    ) {
         if (!isAutoHunting.value) return
 
         clearNextActionTimer()
@@ -371,7 +472,8 @@ export const useGameStore = defineStore('game', () => {
     }
 
     async function playerWins() {
-        const monster = currentMonster.value
+        const monster =
+            currentMonster.value
 
         if (!monster) return
 
@@ -395,7 +497,8 @@ export const useGameStore = defineStore('game', () => {
         deaths.value += 1
 
         const expPenalty = Math.ceil(
-            expNeeded.value * 0.01,
+            expNeeded.value *
+            LEVELING_CONFIG.death.expPenaltyRate,
         )
 
         const actualExpLost = Math.min(
@@ -404,7 +507,7 @@ export const useGameStore = defineStore('game', () => {
         )
 
         exp.value = Math.max(
-            0,
+            LEVELING_CONFIG.death.minimumExp,
             exp.value - expPenalty,
         )
 
@@ -417,11 +520,14 @@ export const useGameStore = defineStore('game', () => {
 
         await persistGame()
 
-        scheduleNextMonster(900)
+        scheduleNextMonster(
+            COMBAT_CONFIG.deathRespawnDelayMs,
+        )
     }
 
     async function playerAttackTick() {
-        const monster = currentMonster.value
+        const monster =
+            currentMonster.value
 
         if (
             !monster ||
@@ -434,7 +540,10 @@ export const useGameStore = defineStore('game', () => {
         const hitChance =
             calculatePlayerHitChance(monster)
 
-        if (Math.random() * 100 > hitChance) {
+        if (
+            Math.random() * 100 >
+            hitChance
+        ) {
             addLog(
                 `Seranganmu MISS terhadap ${monster.name}.`,
             )
@@ -454,7 +563,9 @@ export const useGameStore = defineStore('game', () => {
                     : `Kamu memberikan ${playerAttack.damage} damage.`,
             )
 
-            if (monsterHp.value <= 0) {
+            if (
+                monsterHp.value <= 0
+            ) {
                 await playerWins()
                 return
             }
@@ -474,7 +585,8 @@ export const useGameStore = defineStore('game', () => {
     }
 
     async function monsterAttackTick() {
-        const monster = currentMonster.value
+        const monster =
+            currentMonster.value
 
         if (
             !monster ||
@@ -485,15 +597,22 @@ export const useGameStore = defineStore('game', () => {
         }
 
         const hitChance =
-            calculateMonsterHitChance(monster)
+            calculateMonsterHitChance(
+                monster,
+            )
 
-        if (Math.random() * 100 > hitChance) {
+        if (
+            Math.random() * 100 >
+            hitChance
+        ) {
             addLog(
                 `Kamu menghindari serangan ${monster.name}.`,
             )
         } else {
             const monsterDamage =
-                calculateMonsterDamage(monster)
+                calculateMonsterDamage(
+                    monster,
+                )
 
             hp.value = Math.max(
                 0,
@@ -518,7 +637,7 @@ export const useGameStore = defineStore('game', () => {
                 () => {
                     void monsterAttackTick()
                 },
-                1000,
+                COMBAT_CONFIG.monsterAttackIntervalMs,
             )
         }
     }
@@ -562,7 +681,9 @@ export const useGameStore = defineStore('game', () => {
         currentMonster.value = null
         monsterHp.value = 0
 
-        addLog('Auto Hunt dihentikan.')
+        addLog(
+            'Auto Hunt dihentikan.',
+        )
 
         await persistGame()
     }
@@ -573,7 +694,9 @@ export const useGameStore = defineStore('game', () => {
         hp.value = maxHp.value
         mp.value = maxMp.value
 
-        addLog('HP dan MP dipulihkan.')
+        addLog(
+            'HP dan MP dipulihkan.',
+        )
 
         await persistGame()
     }
