@@ -259,6 +259,8 @@ function changeOtherJobAutoSell(event: Event) {
           </p>
 
           <p>ATK {{ game.currentMonster.attack }}</p>
+          <p>DEF {{ game.currentMonster.defense }}</p>
+          <p>MDEF {{ game.currentMonster.magicDefense }}</p>
           <p>EXP {{ game.currentMonster.exp }}</p>
           <p>Gold {{ game.currentMonster.gold }}</p>
         </div>

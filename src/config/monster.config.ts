@@ -10,6 +10,16 @@ export const MONSTER_CONFIG = {
     perLevel: 2.2,
   },
 
+  defense: {
+    base: 2,
+    perLevel: 0.45,
+  },
+
+  magicDefense: {
+    base: 2,
+    perLevel: 0.45,
+  },
+
   hit: {
     base: 70,
     perLevel: 2,
