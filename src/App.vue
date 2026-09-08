@@ -30,6 +30,17 @@ function getRarityClass(rarity: EquipmentRarity) {
   return `rarity-${rarity}`;
 }
 
+function getClassLabel(characterClass: CharacterClass | "all") {
+  if (characterClass === "all") {
+    return "All";
+  }
+
+  return (
+    CHARACTER_CLASSES.find((option) => option.value === characterClass)
+      ?.label ?? characterClass
+  );
+}
+
 const currentReplacementItem = computed<Equipment | null>(() => {
   const item = pendingEquipment.value;
 
@@ -311,9 +322,7 @@ function changeOtherJobAutoSell(event: Event) {
           <template v-if="game.equipped[slot.key]">
             <span>
               —
-              <strong
-                :class="getRarityClass(game.equipped[slot.key]!.rarity)"
-              >
+              <strong :class="getRarityClass(game.equipped[slot.key]!.rarity)">
                 {{ game.equipped[slot.key]!.name }}
               </strong>
             </span>
@@ -450,7 +459,7 @@ function changeOtherJobAutoSell(event: Event) {
 
           <p>
             Job:
-            {{ item.requiredClass ?? "All" }}
+            {{ getClassLabel(item.requiredClass) }}
           </p>
 
           <p>
@@ -530,10 +539,7 @@ function changeOtherJobAutoSell(event: Event) {
               {{ pendingAccessory.mainStatValue }}
             </span>
 
-            <div
-              v-if="pendingAccessory.affixes.length"
-              class="item-affixes"
-            >
+            <div v-if="pendingAccessory.affixes.length" class="item-affixes">
               <span
                 v-for="(affix, index) in pendingAccessory.affixes"
                 :key="index"
@@ -554,9 +560,7 @@ function changeOtherJobAutoSell(event: Event) {
             <span class="item-card-label">ACCESSORY 1</span>
 
             <div>
-              <strong
-                :class="getRarityClass(game.equipped.accessory1.rarity)"
-              >
+              <strong :class="getRarityClass(game.equipped.accessory1.rarity)">
                 {{ game.equipped.accessory1.name }}
               </strong>
               <span> Lv.{{ game.equipped.accessory1.level }}</span>
@@ -599,9 +603,7 @@ function changeOtherJobAutoSell(event: Event) {
             <span class="item-card-label">ACCESSORY 2</span>
 
             <div>
-              <strong
-                :class="getRarityClass(game.equipped.accessory2.rarity)"
-              >
+              <strong :class="getRarityClass(game.equipped.accessory2.rarity)">
                 {{ game.equipped.accessory2.name }}
               </strong>
               <span> Lv.{{ game.equipped.accessory2.level }}</span>
@@ -652,11 +654,7 @@ function changeOtherJobAutoSell(event: Event) {
       class="modal-backdrop"
       @click.self="closeEquipmentModal"
     >
-      <div
-        class="replacement-modal"
-        role="dialog"
-        aria-modal="true"
-      >
+      <div class="replacement-modal" role="dialog" aria-modal="true">
         <h3>Replace Equipment?</h3>
 
         <div class="equipment-compare">
@@ -725,10 +723,7 @@ function changeOtherJobAutoSell(event: Event) {
               {{ pendingEquipment.mainStatValue }}
             </span>
 
-            <div
-              v-if="pendingEquipment.affixes.length"
-              class="item-affixes"
-            >
+            <div v-if="pendingEquipment.affixes.length" class="item-affixes">
               <span
                 v-for="(affix, index) in pendingEquipment.affixes"
                 :key="index"
@@ -740,9 +735,7 @@ function changeOtherJobAutoSell(event: Event) {
         </div>
 
         <div class="modal-actions">
-          <button type="button" @click="replaceEquipment">
-            Replace
-          </button>
+          <button type="button" @click="replaceEquipment">Replace</button>
 
           <button
             type="button"

@@ -17,8 +17,8 @@ export const CHARACTER_CLASSES: CharacterClassDefinition[] = [
     label: 'Assassin',
   },
   {
-    value: 'archer',
-    label: 'Archer',
+    value: 'hunter',
+    label: 'Hunter',
   },
   {
     value: 'mage',

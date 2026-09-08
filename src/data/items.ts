@@ -1,5 +1,6 @@
 import type {
   CharacterClass,
+  EquipmentClassRequirement,
   EquipmentMainStat,
   EquipmentSlot,
   EquipmentType,
@@ -8,7 +9,7 @@ import type {
 export interface EquipmentDefinition {
   type: EquipmentType
   slot: EquipmentSlot
-  requiredClass: CharacterClass | null
+  requiredClass: EquipmentClassRequirement
   mainStat: EquipmentMainStat
   baselineKey:
     | 'weapon'
@@ -45,7 +46,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Iron',
       assassin: 'Fang',
-      archer: 'Hunter',
+      hunter: 'Scout',
       mage: 'Apprentice',
     },
   },
@@ -55,7 +56,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Steel',
       assassin: 'Shadow',
-      archer: 'Ranger',
+      hunter: 'Ranger',
       mage: 'Arcane',
     },
   },
@@ -65,7 +66,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Knight',
       assassin: 'Night',
-      archer: 'Falcon',
+      hunter: 'Falcon',
       mage: 'Mystic',
     },
   },
@@ -75,7 +76,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Royal',
       assassin: 'Venom',
-      archer: 'Eagle',
+      hunter: 'Eagle',
       mage: 'Sage',
     },
   },
@@ -85,7 +86,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Crimson',
       assassin: 'Phantom',
-      archer: 'Storm',
+      hunter: 'Storm',
       mage: 'Runic',
     },
   },
@@ -95,7 +96,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Frost',
       assassin: 'Reaper',
-      archer: 'Frostwind',
+      hunter: 'Frostwind',
       mage: 'Glacial',
     },
   },
@@ -105,7 +106,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Infernal',
       assassin: 'Bloodfang',
-      archer: 'Hellfire',
+      hunter: 'Hellfire',
       mage: 'Infernal',
     },
   },
@@ -115,7 +116,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Celestial',
       assassin: 'Void',
-      archer: 'Skyfall',
+      hunter: 'Skyfall',
       mage: 'Astral',
     },
   },
@@ -125,7 +126,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Abyssal',
       assassin: 'Deathshade',
-      archer: 'Abyss',
+      hunter: 'Abyss',
       mage: 'Void',
     },
   },
@@ -135,7 +136,7 @@ export const EQUIPMENT_FAMILIES: EquipmentFamily[] = [
     names: {
       warrior: 'Dragon',
       assassin: 'Nightfall',
-      archer: 'Dragonwing',
+      hunter: 'Dragonwing',
       mage: 'Ancient',
     },
   },
@@ -300,11 +301,11 @@ export const CLASS_EQUIPMENT: Record<
     },
   ],
 
-  archer: [
+  hunter: [
     {
       type: 'bow',
       slot: 'weapon',
-      requiredClass: 'archer',
+      requiredClass: 'hunter',
       mainStat: 'ATK',
       baselineKey: 'weapon',
       suffix: 'Bow',
@@ -312,7 +313,7 @@ export const CLASS_EQUIPMENT: Record<
     {
       type: 'rangerCap',
       slot: 'head',
-      requiredClass: 'archer',
+      requiredClass: 'hunter',
       mainStat: 'MDEF',
       baselineKey: 'head',
       suffix: 'Cap',
@@ -320,7 +321,7 @@ export const CLASS_EQUIPMENT: Record<
     {
       type: 'rangerArmor',
       slot: 'armor',
-      requiredClass: 'archer',
+      requiredClass: 'hunter',
       mainStat: 'DEF',
       baselineKey: 'armor',
       suffix: 'Armor',
@@ -328,7 +329,7 @@ export const CLASS_EQUIPMENT: Record<
     {
       type: 'rangerGloves',
       slot: 'gloves',
-      requiredClass: 'archer',
+      requiredClass: 'hunter',
       mainStat: 'MDEF',
       baselineKey: 'gloves',
       suffix: 'Gloves',
@@ -336,7 +337,7 @@ export const CLASS_EQUIPMENT: Record<
     {
       type: 'rangerBoots',
       slot: 'boots',
-      requiredClass: 'archer',
+      requiredClass: 'hunter',
       mainStat: 'MDEF',
       baselineKey: 'boots',
       suffix: 'Boots',
@@ -344,7 +345,7 @@ export const CLASS_EQUIPMENT: Record<
     {
       type: 'quiver',
       slot: 'offHand',
-      requiredClass: 'archer',
+      requiredClass: 'hunter',
       mainStat: 'ATK',
       baselineKey: 'quiver',
       suffix: 'Quiver',
@@ -407,7 +408,7 @@ export const ACCESSORY_EQUIPMENT: EquipmentDefinition[] = [
   {
     type: 'necklace',
     slot: 'accessory',
-    requiredClass: null,
+    requiredClass: 'all',
     mainStat: 'HP',
     baselineKey: 'necklace',
     suffix: 'Necklace',
@@ -415,7 +416,7 @@ export const ACCESSORY_EQUIPMENT: EquipmentDefinition[] = [
   {
     type: 'bracelet',
     slot: 'accessory',
-    requiredClass: null,
+    requiredClass: 'all',
     mainStat: 'ATK',
     baselineKey: 'bracelet',
     suffix: 'Bracelet',
@@ -423,7 +424,7 @@ export const ACCESSORY_EQUIPMENT: EquipmentDefinition[] = [
   {
     type: 'ring',
     slot: 'accessory',
-    requiredClass: null,
+    requiredClass: 'all',
     mainStat: 'MATK',
     baselineKey: 'ring',
     suffix: 'Ring',

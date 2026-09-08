@@ -207,7 +207,7 @@ export const useInventoryStore = defineStore(
 
       if (
         autoSell.value.sellOtherClasses &&
-        item.requiredClass !== null &&
+        item.requiredClass !== 'all' &&
         item.requiredClass !==
           characterClass
       ) {

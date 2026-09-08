@@ -1,8 +1,12 @@
 export type CharacterClass =
     | 'warrior'
     | 'assassin'
-    | 'archer'
+    | 'hunter'
     | 'mage'
+
+export type EquipmentClassRequirement =
+    | CharacterClass
+    | 'all'
 
 export type EquipmentSlot =
     | 'weapon'
@@ -77,7 +81,7 @@ export interface Equipment {
     type: EquipmentType
     slot: EquipmentSlot
 
-    requiredClass: CharacterClass | null
+    requiredClass: EquipmentClassRequirement
 
     level: number
     rarity: EquipmentRarity
@@ -94,7 +98,7 @@ export interface Equipment {
     name: string
     type: EquipmentType
     slot: EquipmentSlot
-    requiredClass: CharacterClass | null
+    requiredClass: EquipmentClassRequirement
     level: number
     rarity: EquipmentRarity
     quality: number

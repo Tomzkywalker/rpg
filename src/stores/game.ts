@@ -1402,7 +1402,7 @@ export const useGameStore = defineStore('game', () => {
         item: Equipment,
     ) {
         return (
-            item.requiredClass === null ||
+            item.requiredClass === 'all' ||
             item.requiredClass ===
             characterClass.value
         )
@@ -1576,7 +1576,7 @@ export const useGameStore = defineStore('game', () => {
                 (item) =>
                     item !== null &&
                     item.requiredClass !==
-                    null &&
+                    'all' &&
                     item.requiredClass !==
                     newClass,
             )

@@ -20,7 +20,7 @@ import type {
 const CHARACTER_CLASSES: CharacterClass[] = [
   'warrior',
   'assassin',
-  'archer',
+  'hunter',
   'mage',
 ]
 
@@ -231,7 +231,7 @@ function createEquipmentName(
   itemLevel: number,
 ): string {
   if (
-    definition.requiredClass === null
+    definition.requiredClass === 'all'
   ) {
     const family =
       getAccessoryFamily(
