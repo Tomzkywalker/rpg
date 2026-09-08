@@ -1,6 +1,4 @@
-import type {
-  CharacterClass,
-} from '../types/equipment'
+import type { CharacterClass } from '../types/equipment'
 
 export interface CharacterClassDefinition {
   value: CharacterClass

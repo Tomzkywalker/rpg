@@ -195,10 +195,7 @@ export const ACCESSORY_FAMILIES: AccessoryFamily[] = [
   },
 ]
 
-export const CLASS_EQUIPMENT: Record<
-  CharacterClass,
-  EquipmentDefinition[]
-> = {
+export const CLASS_EQUIPMENT: Record<CharacterClass, EquipmentDefinition[]> = {
   warrior: [
     {
       type: 'sword',
@@ -431,32 +428,16 @@ export const ACCESSORY_EQUIPMENT: EquipmentDefinition[] = [
   },
 ]
 
-export function getEquipmentFamily(
-  level: number,
-): EquipmentFamily {
+export function getEquipmentFamily(level: number): EquipmentFamily {
   return (
-    EQUIPMENT_FAMILIES.find(
-      (family) =>
-        level >= family.minLevel &&
-        level <= family.maxLevel,
-    ) ??
-    EQUIPMENT_FAMILIES[
-      EQUIPMENT_FAMILIES.length - 1
-    ]
+    EQUIPMENT_FAMILIES.find((family) => level >= family.minLevel && level <= family.maxLevel) ??
+    EQUIPMENT_FAMILIES[EQUIPMENT_FAMILIES.length - 1]
   )
 }
 
-export function getAccessoryFamily(
-  level: number,
-): AccessoryFamily {
+export function getAccessoryFamily(level: number): AccessoryFamily {
   return (
-    ACCESSORY_FAMILIES.find(
-      (family) =>
-        level >= family.minLevel &&
-        level <= family.maxLevel,
-    ) ??
-    ACCESSORY_FAMILIES[
-      ACCESSORY_FAMILIES.length - 1
-    ]
+    ACCESSORY_FAMILIES.find((family) => level >= family.minLevel && level <= family.maxLevel) ??
+    ACCESSORY_FAMILIES[ACCESSORY_FAMILIES.length - 1]
   )
 }

@@ -1,189 +1,157 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref } from 'vue'
 
-import { maps } from "./data/maps";
-import { CHARACTER_CLASSES } from "./data/classes";
-import { useGameStore } from "./stores/game";
+import { maps } from './data/maps'
+import { CHARACTER_CLASSES } from './data/classes'
+import { useGameStore } from './stores/game'
 
-import type {
-  CharacterClass,
-  Equipment,
-  EquipmentRarity,
-} from "./types/equipment";
+import type { CharacterClass, Equipment, EquipmentRarity } from './types/equipment'
 
-import type { InventorySort } from "./stores/inventory";
+import type { InventorySort } from './stores/inventory'
 
-const game = useGameStore();
+const game = useGameStore()
 
-const pendingAccessory = ref<Equipment | null>(null);
-const pendingEquipment = ref<Equipment | null>(null);
+const pendingAccessory = ref<Equipment | null>(null)
+const pendingEquipment = ref<Equipment | null>(null)
 
-type NonAccessorySlot =
-  | "weapon"
-  | "head"
-  | "armor"
-  | "gloves"
-  | "boots"
-  | "offHand";
+type NonAccessorySlot = 'weapon' | 'head' | 'armor' | 'gloves' | 'boots' | 'offHand'
 
 function getRarityClass(rarity: EquipmentRarity) {
-  return `rarity-${rarity}`;
+  return `rarity-${rarity}`
 }
 
-function getClassLabel(characterClass: CharacterClass | "all") {
-  if (characterClass === "all") {
-    return "All";
+function getClassLabel(characterClass: CharacterClass | 'all') {
+  if (characterClass === 'all') {
+    return 'All'
   }
 
-  return (
-    CHARACTER_CLASSES.find((option) => option.value === characterClass)
-      ?.label ?? characterClass
-  );
+  return CHARACTER_CLASSES.find((option) => option.value === characterClass)?.label ?? characterClass
 }
 
 const currentReplacementItem = computed<Equipment | null>(() => {
-  const item = pendingEquipment.value;
+  const item = pendingEquipment.value
 
-  if (!item || item.slot === "accessory") {
-    return null;
+  if (!item || item.slot === 'accessory') {
+    return null
   }
 
-  return game.equipped[item.slot as NonAccessorySlot] ?? null;
-});
+  return game.equipped[item.slot as NonAccessorySlot] ?? null
+})
 
 async function equipItem(item: Equipment) {
-  if (item.slot === "accessory") {
+  if (item.slot === 'accessory') {
     if (!game.equipped.accessory1 || !game.equipped.accessory2) {
-      await game.equipInventoryItem(item.id);
-      return;
+      await game.equipInventoryItem(item.id)
+      return
     }
 
-    pendingAccessory.value = item;
-    return;
+    pendingAccessory.value = item
+    return
   }
 
-  const currentItem = game.equipped[item.slot as NonAccessorySlot];
+  const currentItem = game.equipped[item.slot as NonAccessorySlot]
 
   if (!currentItem) {
-    await game.equipInventoryItem(item.id);
-    return;
+    await game.equipInventoryItem(item.id)
+    return
   }
 
-  pendingEquipment.value = item;
+  pendingEquipment.value = item
 }
 
 function closeAccessoryModal() {
-  pendingAccessory.value = null;
+  pendingAccessory.value = null
 }
 
-async function replaceAccessory(slot: "accessory1" | "accessory2") {
+async function replaceAccessory(slot: 'accessory1' | 'accessory2') {
   if (!pendingAccessory.value) {
-    return;
+    return
   }
 
-  const item = pendingAccessory.value;
-  pendingAccessory.value = null;
+  const item = pendingAccessory.value
+  pendingAccessory.value = null
 
-  await game.equipInventoryItem(item.id, slot);
+  await game.equipInventoryItem(item.id, slot)
 }
 
 function closeEquipmentModal() {
-  pendingEquipment.value = null;
+  pendingEquipment.value = null
 }
 
 async function replaceEquipment() {
   if (!pendingEquipment.value) {
-    return;
+    return
   }
 
-  const item = pendingEquipment.value;
-  pendingEquipment.value = null;
+  const item = pendingEquipment.value
+  pendingEquipment.value = null
 
-  await game.equipInventoryItem(item.id);
+  await game.equipInventoryItem(item.id)
 }
 
-const rarityOptions: EquipmentRarity[] = [
-  "common",
-  "uncommon",
-  "rare",
-  "epic",
-  "legendary",
-  "mythical",
-];
+const rarityOptions: EquipmentRarity[] = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythical']
 
 const equipmentSlots = [
-  { key: "weapon", label: "Weapon" },
-  { key: "head", label: "Head" },
-  { key: "armor", label: "Armor" },
-  { key: "gloves", label: "Gloves" },
-  { key: "boots", label: "Boots" },
-  { key: "offHand", label: "Off-Hand" },
-  { key: "accessory1", label: "Accessory 1" },
-  { key: "accessory2", label: "Accessory 2" },
-] as const;
+  { key: 'weapon', label: 'Weapon' },
+  { key: 'head', label: 'Head' },
+  { key: 'armor', label: 'Armor' },
+  { key: 'gloves', label: 'Gloves' },
+  { key: 'boots', label: 'Boots' },
+  { key: 'offHand', label: 'Off-Hand' },
+  { key: 'accessory1', label: 'Accessory 1' },
+  { key: 'accessory2', label: 'Accessory 2' },
+] as const
 
 onMounted(() => {
-  void game.initializeGame();
-});
+  void game.initializeGame()
+})
 
 function changeJob(event: Event) {
-  const target = event.target as HTMLSelectElement;
+  const target = event.target as HTMLSelectElement
 
-  void game.setCharacterClass(target.value as CharacterClass);
+  void game.setCharacterClass(target.value as CharacterClass)
 }
 
 function changeInventorySort(event: Event) {
-  const target = event.target as HTMLSelectElement;
+  const target = event.target as HTMLSelectElement
 
-  void game.setInventorySort(target.value as InventorySort);
+  void game.setInventorySort(target.value as InventorySort)
 }
 
 function changeAutoSellEnabled(event: Event) {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
 
-  void game.setAutoSellEnabled(target.checked);
+  void game.setAutoSellEnabled(target.checked)
 }
 
 function changeAutoSellLevelEnabled(event: Event) {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
 
-  void game.setAutoSellBelowLevel(
-    target.checked,
-    game.inventory.autoSell.sellBelowLevel,
-  );
+  void game.setAutoSellBelowLevel(target.checked, game.inventory.autoSell.sellBelowLevel)
 }
 
 function changeAutoSellLevel(event: Event) {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
 
-  void game.setAutoSellBelowLevel(
-    game.inventory.autoSell.sellBelowLevelEnabled,
-    Number(target.value),
-  );
+  void game.setAutoSellBelowLevel(game.inventory.autoSell.sellBelowLevelEnabled, Number(target.value))
 }
 
 function changeAutoSellRarityEnabled(event: Event) {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
 
-  void game.setAutoSellMinimumRarity(
-    target.checked,
-    game.inventory.autoSell.minimumRarity,
-  );
+  void game.setAutoSellMinimumRarity(target.checked, game.inventory.autoSell.minimumRarity)
 }
 
 function changeMinimumRarity(event: Event) {
-  const target = event.target as HTMLSelectElement;
+  const target = event.target as HTMLSelectElement
 
-  void game.setAutoSellMinimumRarity(
-    game.inventory.autoSell.sellBelowRarityEnabled,
-    target.value as EquipmentRarity,
-  );
+  void game.setAutoSellMinimumRarity(game.inventory.autoSell.sellBelowRarityEnabled, target.value as EquipmentRarity)
 }
 
 function changeOtherJobAutoSell(event: Event) {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
 
-  void game.setAutoSellOtherClasses(target.checked);
+  void game.setAutoSellOtherClasses(target.checked)
 }
 </script>
 
@@ -203,16 +171,8 @@ function changeOtherJobAutoSell(event: Event) {
 
         <label>
           Job
-          <select
-            :value="game.characterClass"
-            :disabled="game.isAutoHunting"
-            @change="changeJob"
-          >
-            <option
-              v-for="job in CHARACTER_CLASSES"
-              :key="job.value"
-              :value="job.value"
-            >
+          <select :value="game.characterClass" :disabled="game.isAutoHunting" @change="changeJob">
+            <option v-for="job in CHARACTER_CLASSES" :key="job.value" :value="job.value">
               {{ job.label }}
             </option>
           </select>
@@ -241,12 +201,7 @@ function changeOtherJobAutoSell(event: Event) {
             gear
           </span>
 
-          <button
-            :disabled="game.statusPoints <= 0"
-            @click="game.addStat(stat)"
-          >
-            +1
-          </button>
+          <button :disabled="game.statusPoints <= 0" @click="game.addStat(stat)">+1</button>
         </div>
 
         <hr />
@@ -270,9 +225,7 @@ function changeOtherJobAutoSell(event: Event) {
           <select
             :value="game.selectedMapId"
             :disabled="game.isAutoHunting"
-            @change="
-              game.selectMap(Number(($event.target as HTMLSelectElement).value))
-            "
+            @change="game.selectMap(Number(($event.target as HTMLSelectElement).value))"
           >
             <option v-for="map in maps" :key="map.id" :value="map.id">
               {{ map.name }}
@@ -286,9 +239,7 @@ function changeOtherJobAutoSell(event: Event) {
           <strong>{{ game.selectedMap.name }}</strong>
         </p>
 
-        <button v-if="!game.isAutoHunting" @click="game.startAutoHunt">
-          Start Auto Hunt
-        </button>
+        <button v-if="!game.isAutoHunting" @click="game.startAutoHunt">Start Auto Hunt</button>
 
         <button v-else @click="game.stopAutoHunt">Stop Auto Hunt</button>
 
@@ -334,11 +285,9 @@ function changeOtherJobAutoSell(event: Event) {
         </div>
 
         <p>
-          Gear bonus: HP +{{ game.equipmentMainStatBonuses.HP }}, ATK +{{
-            game.equipmentMainStatBonuses.ATK
-          }}, DEF +{{ game.equipmentMainStatBonuses.DEF }}, MATK +{{
-            game.equipmentMainStatBonuses.MATK
-          }}, MDEF +{{ game.equipmentMainStatBonuses.MDEF }}
+          Gear bonus: HP +{{ game.equipmentMainStatBonuses.HP }}, ATK +{{ game.equipmentMainStatBonuses.ATK }}, DEF +{{
+            game.equipmentMainStatBonuses.DEF
+          }}, MATK +{{ game.equipmentMainStatBonuses.MATK }}, MDEF +{{ game.equipmentMainStatBonuses.MDEF }}
         </p>
 
         <hr />
@@ -353,10 +302,7 @@ function changeOtherJobAutoSell(event: Event) {
 
         <label>
           Sort
-          <select
-            :value="game.inventory.sortMode"
-            @change="changeInventorySort"
-          >
+          <select :value="game.inventory.sortMode" @change="changeInventorySort">
             <option value="rarityDesc">Rarity ↓</option>
 
             <option value="rarityAsc">Rarity ↑</option>
@@ -367,21 +313,12 @@ function changeOtherJobAutoSell(event: Event) {
           </select>
         </label>
 
-        <button
-          :disabled="game.inventory.isEmpty"
-          @click="game.sellAllUnlockedItems"
-        >
-          Sell All Unlocked
-        </button>
+        <button :disabled="game.inventory.isEmpty" @click="game.sellAllUnlockedItems">Sell All Unlocked</button>
 
         <h3>Auto Sell</h3>
 
         <label>
-          <input
-            type="checkbox"
-            :checked="game.inventory.autoSell.enabled"
-            @change="changeAutoSellEnabled"
-          />
+          <input type="checkbox" :checked="game.inventory.autoSell.enabled" @change="changeAutoSellEnabled" />
 
           Enable Auto Sell
         </label>
@@ -398,12 +335,7 @@ function changeOtherJobAutoSell(event: Event) {
           Sell item below Level
         </label>
 
-        <input
-          type="number"
-          min="1"
-          :value="game.inventory.autoSell.sellBelowLevel"
-          @change="changeAutoSellLevel"
-        />
+        <input type="number" min="1" :value="game.inventory.autoSell.sellBelowLevel" @change="changeAutoSellLevel" />
 
         <br />
 
@@ -417,10 +349,7 @@ function changeOtherJobAutoSell(event: Event) {
           Sell below rarity
         </label>
 
-        <select
-          :value="game.inventory.autoSell.minimumRarity"
-          @change="changeMinimumRarity"
-        >
+        <select :value="game.inventory.autoSell.minimumRarity" @change="changeMinimumRarity">
           <option v-for="rarity in rarityOptions" :key="rarity" :value="rarity">
             {{ rarity }}
           </option>
@@ -429,11 +358,7 @@ function changeOtherJobAutoSell(event: Event) {
         <br />
 
         <label>
-          <input
-            type="checkbox"
-            :checked="game.inventory.autoSell.sellOtherClasses"
-            @change="changeOtherJobAutoSell"
-          />
+          <input type="checkbox" :checked="game.inventory.autoSell.sellOtherClasses" @change="changeOtherJobAutoSell" />
 
           Sell equipment from other jobs
         </label>
@@ -481,15 +406,10 @@ function changeOtherJobAutoSell(event: Event) {
           <button @click="equipItem(item)">Equip</button>
 
           <button @click="game.toggleInventoryItemLock(item.id)">
-            {{ item.locked ? "Unlock" : "Lock" }}
+            {{ item.locked ? 'Unlock' : 'Lock' }}
           </button>
 
-          <button
-            :disabled="item.locked"
-            @click="game.sellInventoryItem(item.id)"
-          >
-            Sell
-          </button>
+          <button :disabled="item.locked" @click="game.sellInventoryItem(item.id)">Sell</button>
         </div>
 
         <div v-if="game.battleLog.length">
@@ -505,11 +425,7 @@ function changeOtherJobAutoSell(event: Event) {
     </section>
 
     <!-- ACCESSORY REPLACEMENT MODAL -->
-    <div
-      v-if="pendingAccessory"
-      class="modal-backdrop"
-      @click.self="closeAccessoryModal"
-    >
+    <div v-if="pendingAccessory" class="modal-backdrop" @click.self="closeAccessoryModal">
       <div class="replacement-modal" role="dialog" aria-modal="true">
         <h3>Replace Accessory?</h3>
 
@@ -531,7 +447,7 @@ function changeOtherJobAutoSell(event: Event) {
 
             <span>
               Job:
-              {{ pendingAccessory.requiredClass ?? "All" }}
+              {{ pendingAccessory.requiredClass ?? 'All' }}
             </span>
 
             <span>
@@ -540,10 +456,7 @@ function changeOtherJobAutoSell(event: Event) {
             </span>
 
             <div v-if="pendingAccessory.affixes.length" class="item-affixes">
-              <span
-                v-for="(affix, index) in pendingAccessory.affixes"
-                :key="index"
-              >
+              <span v-for="(affix, index) in pendingAccessory.affixes" :key="index">
                 {{ affix.stat }} {{ affix.value }}
               </span>
             </div>
@@ -573,7 +486,7 @@ function changeOtherJobAutoSell(event: Event) {
 
             <span>
               Job:
-              {{ game.equipped.accessory1.requiredClass ?? "All" }}
+              {{ game.equipped.accessory1.requiredClass ?? 'All' }}
             </span>
 
             <span>
@@ -581,14 +494,8 @@ function changeOtherJobAutoSell(event: Event) {
               {{ game.equipped.accessory1.mainStatValue }}
             </span>
 
-            <div
-              v-if="game.equipped.accessory1.affixes.length"
-              class="item-affixes"
-            >
-              <span
-                v-for="(affix, index) in game.equipped.accessory1.affixes"
-                :key="index"
-              >
+            <div v-if="game.equipped.accessory1.affixes.length" class="item-affixes">
+              <span v-for="(affix, index) in game.equipped.accessory1.affixes" :key="index">
                 {{ affix.stat }} {{ affix.value }}
               </span>
             </div>
@@ -616,7 +523,7 @@ function changeOtherJobAutoSell(event: Event) {
 
             <span>
               Job:
-              {{ game.equipped.accessory2.requiredClass ?? "All" }}
+              {{ game.equipped.accessory2.requiredClass ?? 'All' }}
             </span>
 
             <span>
@@ -624,36 +531,20 @@ function changeOtherJobAutoSell(event: Event) {
               {{ game.equipped.accessory2.mainStatValue }}
             </span>
 
-            <div
-              v-if="game.equipped.accessory2.affixes.length"
-              class="item-affixes"
-            >
-              <span
-                v-for="(affix, index) in game.equipped.accessory2.affixes"
-                :key="index"
-              >
+            <div v-if="game.equipped.accessory2.affixes.length" class="item-affixes">
+              <span v-for="(affix, index) in game.equipped.accessory2.affixes" :key="index">
                 {{ affix.stat }} {{ affix.value }}
               </span>
             </div>
           </button>
         </div>
 
-        <button
-          type="button"
-          class="cancel-button accessory-cancel-button"
-          @click="closeAccessoryModal"
-        >
-          Cancel
-        </button>
+        <button type="button" class="cancel-button accessory-cancel-button" @click="closeAccessoryModal">Cancel</button>
       </div>
     </div>
 
     <!-- NORMAL EQUIPMENT REPLACEMENT MODAL -->
-    <div
-      v-if="pendingEquipment && currentReplacementItem"
-      class="modal-backdrop"
-      @click.self="closeEquipmentModal"
-    >
+    <div v-if="pendingEquipment && currentReplacementItem" class="modal-backdrop" @click.self="closeEquipmentModal">
       <div class="replacement-modal" role="dialog" aria-modal="true">
         <h3>Replace Equipment?</h3>
 
@@ -675,7 +566,7 @@ function changeOtherJobAutoSell(event: Event) {
 
             <span>
               Job:
-              {{ currentReplacementItem.requiredClass ?? "All" }}
+              {{ currentReplacementItem.requiredClass ?? 'All' }}
             </span>
 
             <span>
@@ -683,14 +574,8 @@ function changeOtherJobAutoSell(event: Event) {
               {{ currentReplacementItem.mainStatValue }}
             </span>
 
-            <div
-              v-if="currentReplacementItem.affixes.length"
-              class="item-affixes"
-            >
-              <span
-                v-for="(affix, index) in currentReplacementItem.affixes"
-                :key="index"
-              >
+            <div v-if="currentReplacementItem.affixes.length" class="item-affixes">
+              <span v-for="(affix, index) in currentReplacementItem.affixes" :key="index">
                 {{ affix.stat }} {{ affix.value }}
               </span>
             </div>
@@ -715,7 +600,7 @@ function changeOtherJobAutoSell(event: Event) {
 
             <span>
               Job:
-              {{ pendingEquipment.requiredClass ?? "All" }}
+              {{ pendingEquipment.requiredClass ?? 'All' }}
             </span>
 
             <span>
@@ -724,10 +609,7 @@ function changeOtherJobAutoSell(event: Event) {
             </span>
 
             <div v-if="pendingEquipment.affixes.length" class="item-affixes">
-              <span
-                v-for="(affix, index) in pendingEquipment.affixes"
-                :key="index"
-              >
+              <span v-for="(affix, index) in pendingEquipment.affixes" :key="index">
                 {{ affix.stat }} {{ affix.value }}
               </span>
             </div>
@@ -737,13 +619,7 @@ function changeOtherJobAutoSell(event: Event) {
         <div class="modal-actions">
           <button type="button" @click="replaceEquipment">Replace</button>
 
-          <button
-            type="button"
-            class="cancel-button"
-            @click="closeEquipmentModal"
-          >
-            Cancel
-          </button>
+          <button type="button" class="cancel-button" @click="closeEquipmentModal">Cancel</button>
         </div>
       </div>
     </div>

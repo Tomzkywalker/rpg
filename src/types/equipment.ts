@@ -1,110 +1,80 @@
-export type CharacterClass =
-    | 'warrior'
-    | 'assassin'
-    | 'hunter'
-    | 'mage'
+export type CharacterClass = 'warrior' | 'assassin' | 'hunter' | 'mage'
 
-export type EquipmentClassRequirement =
-    | CharacterClass
-    | 'all'
+export type EquipmentClassRequirement = CharacterClass | 'all'
 
-export type EquipmentSlot =
-    | 'weapon'
-    | 'head'
-    | 'armor'
-    | 'gloves'
-    | 'boots'
-    | 'offHand'
-    | 'accessory'
+export type EquipmentSlot = 'weapon' | 'head' | 'armor' | 'gloves' | 'boots' | 'offHand' | 'accessory'
 
-export type EquipmentRarity =
-    | 'common'
-    | 'uncommon'
-    | 'rare'
-    | 'epic'
-    | 'legendary'
-    | 'mythical'
+export type EquipmentRarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' | 'mythical'
 
-export type BaseStat =
-    | 'STR'
-    | 'AGI'
-    | 'VIT'
-    | 'INT'
-    | 'DEX'
-    | 'LUK'
+export type BaseStat = 'STR' | 'AGI' | 'VIT' | 'INT' | 'DEX' | 'LUK'
 
-export type EquipmentMainStat =
-    | 'HP'
-    | 'ATK'
-    | 'DEF'
-    | 'MATK'
-    | 'MDEF'
+export type EquipmentMainStat = 'HP' | 'ATK' | 'DEF' | 'MATK' | 'MDEF'
 
 export type EquipmentType =
-    | 'sword'
-    | 'dagger'
-    | 'bow'
-    | 'staff'
-    | 'helmet'
-    | 'hood'
-    | 'rangerCap'
-    | 'circlet'
-    | 'plateArmor'
-    | 'garb'
-    | 'rangerArmor'
-    | 'robe'
-    | 'gauntlets'
-    | 'assassinGloves'
-    | 'rangerGloves'
-    | 'mysticGloves'
-    | 'greaves'
-    | 'assassinBoots'
-    | 'rangerBoots'
-    | 'mysticBoots'
-    | 'shield'
-    | 'offhandDagger'
-    | 'quiver'
-    | 'tome'
-    | 'necklace'
-    | 'bracelet'
-    | 'ring'
+  | 'sword'
+  | 'dagger'
+  | 'bow'
+  | 'staff'
+  | 'helmet'
+  | 'hood'
+  | 'rangerCap'
+  | 'circlet'
+  | 'plateArmor'
+  | 'garb'
+  | 'rangerArmor'
+  | 'robe'
+  | 'gauntlets'
+  | 'assassinGloves'
+  | 'rangerGloves'
+  | 'mysticGloves'
+  | 'greaves'
+  | 'assassinBoots'
+  | 'rangerBoots'
+  | 'mysticBoots'
+  | 'shield'
+  | 'offhandDagger'
+  | 'quiver'
+  | 'tome'
+  | 'necklace'
+  | 'bracelet'
+  | 'ring'
 
 export interface EquipmentAffix {
-    stat: BaseStat
-    value: number
+  stat: BaseStat
+  value: number
 }
 
 export interface Equipment {
-    id: string
+  id: string
 
-    name: string
-    type: EquipmentType
-    slot: EquipmentSlot
+  name: string
+  type: EquipmentType
+  slot: EquipmentSlot
 
-    requiredClass: EquipmentClassRequirement
+  requiredClass: EquipmentClassRequirement
 
-    level: number
-    rarity: EquipmentRarity
-    quality: number
+  level: number
+  rarity: EquipmentRarity
+  quality: number
 
-    mainStat: EquipmentMainStat
-    mainStatValue: number
+  mainStat: EquipmentMainStat
+  mainStatValue: number
 
-    affixes: EquipmentAffix[]
+  affixes: EquipmentAffix[]
 }
 
 export interface Equipment {
-    id: string
-    name: string
-    type: EquipmentType
-    slot: EquipmentSlot
-    requiredClass: EquipmentClassRequirement
-    level: number
-    rarity: EquipmentRarity
-    quality: number
-    mainStat: EquipmentMainStat
-    mainStatValue: number
-    affixes: EquipmentAffix[]
+  id: string
+  name: string
+  type: EquipmentType
+  slot: EquipmentSlot
+  requiredClass: EquipmentClassRequirement
+  level: number
+  rarity: EquipmentRarity
+  quality: number
+  mainStat: EquipmentMainStat
+  mainStatValue: number
+  affixes: EquipmentAffix[]
 
-    locked: boolean
+  locked: boolean
 }

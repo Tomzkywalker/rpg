@@ -1,10 +1,10 @@
 export const DROP_CONFIG = {
-  equipmentChance: 0.10,
+  equipmentChance: 0.1,
 
   rarity: {
     common: 0.639,
-    uncommon: 0.20,
-    rare: 0.10,
+    uncommon: 0.2,
+    rare: 0.1,
     epic: 0.05,
     legendary: 0.01,
     mythical: 0.001,
