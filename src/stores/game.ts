@@ -501,9 +501,23 @@ export const useGameStore = defineStore('game', () => {
             characterClass:
                 characterClass.value,
 
-            equipped: {
-                ...equipped.value,
-            },
+            equipped: Object.fromEntries(
+                Object.entries(equipped.value).map(
+                    ([slot, item]) => [
+                        slot,
+                        item
+                            ? {
+                                ...item,
+                                affixes: item.affixes.map(
+                                    (affix) => ({
+                                        ...affix,
+                                    }),
+                                ),
+                            }
+                            : null,
+                    ],
+                ),
+            ) as EquippedItems,
 
             inventory: {
                 items:
