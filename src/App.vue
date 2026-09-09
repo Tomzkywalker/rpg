@@ -406,17 +406,22 @@ function changeOtherJobAutoSell(event: Event) {
 
                 <div class="equipment-grid">
                   <div v-for="slot in equipmentSlots" :key="slot.key" class="equipment-slot">
-                    <span class="equipment-slot-label">{{ slot.label }}</span>
+                    <span
+                      class="equipment-slot-label"
+                      :class="
+                        game.equipped[slot.key]
+                          ? ['equipment-item-name', getRarityClass(game.equipped[slot.key]!.rarity)]
+                          : undefined
+                      "
+                    >
+                      {{ game.equipped[slot.key]?.name ?? slot.label }}
+                    </span>
 
                     <button
                       v-if="game.equipped[slot.key]"
                       type="button"
                       class="equipment-slot-content equipment-slot-filled"
                       :aria-label="`View ${game.equipped[slot.key]!.name} details`"
-                      @mouseenter="showEquipmentNameTooltip(game.equipped[slot.key]!, $event)"
-                      @mouseleave="scheduleEquipmentNameTooltipHide"
-                      @focus="showEquipmentNameTooltip(game.equipped[slot.key]!, $event)"
-                      @blur="scheduleEquipmentNameTooltipHide"
                       @click="openEquippedItemDetail(game.equipped[slot.key]!, slot.key)"
                     >
                       <span
@@ -986,6 +991,10 @@ function changeOtherJobAutoSell(event: Event) {
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.equipment-item-name {
+  text-transform: none;
 }
 
 .equipment-slot-content {
