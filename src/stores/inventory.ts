@@ -106,13 +106,18 @@ export const useInventoryStore = defineStore('inventory', () => {
     return Math.max(1, Math.floor(item.level * INVENTORY_CONFIG.sellPrice.basePerLevel * rarityMultiplier))
   }
 
-  function shouldAutoSell(item: Equipment, characterClass: CharacterClass): boolean {
-    if (!autoSell.value.enabled) {
+  function matchesSellFilters(item: Equipment, characterClass: CharacterClass): boolean {
+    if (item.locked) {
       return false
     }
 
-    if (item.locked) {
-      return false
+    const hasActiveFilter =
+      autoSell.value.sellBelowLevelEnabled ||
+      autoSell.value.sellBelowRarityEnabled ||
+      autoSell.value.sellOtherClasses
+
+    if (!hasActiveFilter) {
+      return true
     }
 
     if (autoSell.value.sellBelowLevelEnabled && item.level < autoSell.value.sellBelowLevel) {
@@ -128,6 +133,14 @@ export const useInventoryStore = defineStore('inventory', () => {
     }
 
     return false
+  }
+
+  function shouldAutoSell(item: Equipment, characterClass: CharacterClass): boolean {
+    if (!autoSell.value.enabled) {
+      return false
+    }
+
+    return matchesSellFilters(item, characterClass)
   }
 
   function addItem(item: Equipment, characterClass: CharacterClass): AddItemResult {
@@ -229,13 +242,13 @@ export const useInventoryStore = defineStore('inventory', () => {
     return sellPrice
   }
 
-  function sellUnlockedItems(): number {
+  function sellFilteredItems(characterClass: CharacterClass): number {
     let totalGold = 0
 
     const remainingItems: Equipment[] = []
 
     for (const item of items.value) {
-      if (item.locked) {
+      if (!matchesSellFilters(item, characterClass)) {
         remainingItems.push(item)
         continue
       }
@@ -309,7 +322,7 @@ export const useInventoryStore = defineStore('inventory', () => {
     unlockItem,
 
     sellItem,
-    sellUnlockedItems,
+    sellFilteredItems,
     calculateSellPrice,
 
     setSortMode,

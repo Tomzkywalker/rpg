@@ -1034,8 +1034,8 @@ export const useGameStore = defineStore('game', () => {
         await persistGame()
     }
 
-    async function sellAllUnlockedItems() {
-        const earned = inventory.sellUnlockedItems()
+    async function sellAllFilteredItems() {
+        const earned = inventory.sellFilteredItems(characterClass.value)
 
         if (earned <= 0) {
             return
@@ -1043,7 +1043,7 @@ export const useGameStore = defineStore('game', () => {
 
         gold.value += earned
 
-        addLog(`Semua item unlocked dijual +${earned} Gold.`)
+        addLog(`Sell All berhasil +${earned} Gold.`)
 
         await persistGame()
     }
@@ -1150,7 +1150,7 @@ export const useGameStore = defineStore('game', () => {
 
         toggleInventoryItemLock,
         sellInventoryItem,
-        sellAllUnlockedItems,
+        sellAllFilteredItems,
 
         setInventorySort,
         setInventoryCapacity,

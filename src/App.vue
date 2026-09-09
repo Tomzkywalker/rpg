@@ -6,13 +6,17 @@ import { CHARACTER_CLASSES } from './data/classes'
 import { useGameStore } from './stores/game'
 
 import type { CharacterClass, Equipment, EquipmentRarity } from './types/equipment'
-
 import type { InventorySort } from './stores/inventory'
 
 const game = useGameStore()
 
 const pendingAccessory = ref<Equipment | null>(null)
 const pendingEquipment = ref<Equipment | null>(null)
+
+const showPlayer = ref(true)
+const showInventory = ref(true)
+const showAutoHunt = ref(true)
+const showBattleLog = ref(true)
 
 type NonAccessorySlot = 'weapon' | 'head' | 'armor' | 'gloves' | 'boots' | 'offHand'
 
@@ -94,12 +98,12 @@ const rarityOptions: EquipmentRarity[] = ['common', 'uncommon', 'rare', 'epic', 
 const equipmentSlots = [
   { key: 'weapon', label: 'Weapon' },
   { key: 'head', label: 'Head' },
-  { key: 'armor', label: 'Armor' },
-  { key: 'gloves', label: 'Gloves' },
-  { key: 'boots', label: 'Boots' },
   { key: 'offHand', label: 'Off-Hand' },
+  { key: 'armor', label: 'Armor' },
   { key: 'accessory1', label: 'Accessory 1' },
+  { key: 'gloves', label: 'Gloves' },
   { key: 'accessory2', label: 'Accessory 2' },
+  { key: 'boots', label: 'Boots' },
 ] as const
 
 onMounted(() => {
@@ -167,262 +171,277 @@ function changeOtherJobAutoSell(event: Event) {
         <p class="eyebrow">SYSTEM</p>
         <h1>Solo RPG Prototype</h1>
 
-        <h2>Player</h2>
-
-        <label>
-          Job
-          <select :value="game.characterClass" :disabled="game.isAutoHunting" @change="changeJob">
-            <option v-for="job in CHARACTER_CLASSES" :key="job.value" :value="job.value">
-              {{ job.label }}
-            </option>
-          </select>
-        </label>
-
-        <p>Level {{ game.level }}</p>
-        <p>EXP {{ game.exp }} / {{ game.expNeeded }}</p>
-        <p>HP {{ game.hp }} / {{ game.maxHp }}</p>
-        <p>MP {{ game.mp }} / {{ game.maxMp }}</p>
-        <p>Gold {{ game.gold }}</p>
-        <p>Status Points {{ game.statusPoints }}</p>
-        <p>Kills {{ game.kills }}</p>
-        <p>Deaths {{ game.deaths }}</p>
-
-        <hr />
-
-        <h2>Base Stats</h2>
-
-        <div v-for="(value, stat) in game.stats" :key="stat">
-          <strong>{{ stat }}</strong
-          >:
-          {{ value }}
-
-          <span v-if="game.equipmentBaseStatBonuses[stat] > 0">
-            +{{ game.equipmentBaseStatBonuses[stat] }}
-            gear
-          </span>
-
-          <button :disabled="game.statusPoints <= 0" @click="game.addStat(stat)">+1</button>
-        </div>
-
-        <hr />
-
-        <h2>Combat Stats</h2>
-        <p>ATK: {{ game.attack }}</p>
-        <p>DEF: {{ game.defense }}</p>
-        <p>MATK: {{ game.magicAttack }}</p>
-        <p>MDEF: {{ game.magicDefense }}</p>
-        <p>HIT: {{ game.hit }}</p>
-        <p>FLEE: {{ game.flee }}</p>
-        <p>CRIT: {{ game.criticalChance.toFixed(1) }}%</p>
-        <p>ASPD: {{ game.attackSpeed }}</p>
-
-        <hr />
-
-        <h2>Auto Hunt</h2>
-
-        <label>
-          Hunting Map
-          <select
-            :value="game.selectedMapId"
-            :disabled="game.isAutoHunting"
-            @change="game.selectMap(Number(($event.target as HTMLSelectElement).value))"
-          >
-            <option v-for="map in maps" :key="map.id" :value="map.id">
-              {{ map.name }}
-              (Lv. {{ map.minLevel }}-{{ map.maxLevel }})
-            </option>
-          </select>
-        </label>
-
-        <p>
-          Selected:
-          <strong>{{ game.selectedMap.name }}</strong>
-        </p>
-
-        <button v-if="!game.isAutoHunting" @click="game.startAutoHunt">Start Auto Hunt</button>
-
-        <button v-else @click="game.stopAutoHunt">Stop Auto Hunt</button>
-
-        <button :disabled="game.isAutoHunting" @click="game.rest">Rest</button>
-
-        <div v-if="game.currentMonster">
-          <hr />
-
-          <h2>
-            {{ game.currentMonster.name }}
-            Lv.{{ game.currentMonster.level }}
-          </h2>
-
-          <p>
-            HP {{ game.monsterHp }} /
-            {{ game.currentMonster.maxHp }}
-          </p>
-
-          <p>ATK {{ game.currentMonster.attack }}</p>
-          <p>DEF {{ game.currentMonster.defense }}</p>
-          <p>MDEF {{ game.currentMonster.magicDefense }}</p>
-          <p>EXP {{ game.currentMonster.exp }}</p>
-          <p>Gold {{ game.currentMonster.gold }}</p>
-        </div>
-
-        <hr />
-
-        <h2>Equipment</h2>
-
-        <div v-for="slot in equipmentSlots" :key="slot.key">
-          <strong>{{ slot.label }}</strong>
-
-          <template v-if="game.equipped[slot.key]">
-            <span>
-              —
-              <strong :class="getRarityClass(game.equipped[slot.key]!.rarity)">
-                {{ game.equipped[slot.key]!.name }}
-              </strong>
-            </span>
-
-            <button @click="game.unequipItem(slot.key)">Unequip</button>
-          </template>
-
-          <span v-else>— Empty</span>
-        </div>
-
-        <p>
-          Gear bonus: HP +{{ game.equipmentMainStatBonuses.HP }}, ATK +{{ game.equipmentMainStatBonuses.ATK }}, DEF +{{
-            game.equipmentMainStatBonuses.DEF
-          }}, MATK +{{ game.equipmentMainStatBonuses.MATK }}, MDEF +{{ game.equipmentMainStatBonuses.MDEF }}
-        </p>
-
-        <hr />
-
-        <h2>Inventory</h2>
-
-        <p>
-          {{ game.inventory.itemCount }}
-          /
-          {{ game.inventory.capacity }}
-        </p>
-
-        <label>
-          Sort
-          <select :value="game.inventory.sortMode" @change="changeInventorySort">
-            <option value="rarityDesc">Rarity ↓</option>
-
-            <option value="rarityAsc">Rarity ↑</option>
-
-            <option value="levelDesc">Level ↓</option>
-
-            <option value="levelAsc">Level ↑</option>
-          </select>
-        </label>
-
-        <button :disabled="game.inventory.isEmpty" @click="game.sellAllUnlockedItems">Sell All Unlocked</button>
-
-        <h3>Auto Sell</h3>
-
-        <label>
-          <input type="checkbox" :checked="game.inventory.autoSell.enabled" @change="changeAutoSellEnabled" />
-
-          Enable Auto Sell
-        </label>
-
-        <br />
-
-        <label>
-          <input
-            type="checkbox"
-            :checked="game.inventory.autoSell.sellBelowLevelEnabled"
-            @change="changeAutoSellLevelEnabled"
-          />
-
-          Sell item below Level
-        </label>
-
-        <input type="number" min="1" :value="game.inventory.autoSell.sellBelowLevel" @change="changeAutoSellLevel" />
-
-        <br />
-
-        <label>
-          <input
-            type="checkbox"
-            :checked="game.inventory.autoSell.sellBelowRarityEnabled"
-            @change="changeAutoSellRarityEnabled"
-          />
-
-          Sell below rarity
-        </label>
-
-        <select :value="game.inventory.autoSell.minimumRarity" @change="changeMinimumRarity">
-          <option v-for="rarity in rarityOptions" :key="rarity" :value="rarity">
-            {{ rarity }}
-          </option>
-        </select>
-
-        <br />
-
-        <label>
-          <input type="checkbox" :checked="game.inventory.autoSell.sellOtherClasses" @change="changeOtherJobAutoSell" />
-
-          Sell equipment from other jobs
-        </label>
-
-        <div v-if="game.inventory.isEmpty">
-          <p>Inventory kosong.</p>
-        </div>
-
-        <div v-for="item in game.inventory.sortedItems" :key="item.id">
-          <hr />
-
-          <p>
-            <strong :class="getRarityClass(item.rarity)">
-              {{ item.name }}
-            </strong>
-            <span> Lv.{{ item.level }}</span>
-          </p>
-
-          <p>
-            {{ item.rarity.toUpperCase() }}
-            • Quality {{ item.quality }}%
-          </p>
-
-          <p>
-            Job:
-            {{ getClassLabel(item.requiredClass) }}
-          </p>
-
-          <p>
-            {{ item.mainStat }}
-            {{ item.mainStatValue }}
-          </p>
-
-          <p v-for="(affix, index) in item.affixes" :key="index">
-            {{ affix.stat }}
-            {{ affix.value }}
-          </p>
-
-          <p>
-            Sell:
-            {{ game.inventory.calculateSellPrice(item) }}
-            Gold
-          </p>
-
-          <button @click="equipItem(item)">Equip</button>
-
-          <button @click="game.toggleInventoryItemLock(item.id)">
-            {{ item.locked ? 'Unlock' : 'Lock' }}
+        <!-- PLAYER -->
+        <section class="collapsible-section">
+          <button class="section-header" type="button" @click="showPlayer = !showPlayer">
+            <span>Player</span>
+            <span>{{ showPlayer ? '−' : '+' }}</span>
           </button>
 
-          <button :disabled="item.locked" @click="game.sellInventoryItem(item.id)">Sell</button>
-        </div>
+          <div v-if="showPlayer" class="section-body">
+            <div class="player-summary">
+              <label>
+                Job
+                <select :value="game.characterClass" :disabled="game.isAutoHunting" @change="changeJob">
+                  <option v-for="job in CHARACTER_CLASSES" :key="job.value" :value="job.value">
+                    {{ job.label }}
+                  </option>
+                </select>
+              </label>
 
-        <div v-if="game.battleLog.length">
-          <hr />
+              <div class="player-resource-grid">
+                <span>Level {{ game.level }}</span>
+                <span>EXP {{ game.exp }} / {{ game.expNeeded }}</span>
+                <span>HP {{ game.hp }} / {{ game.maxHp }}</span>
+                <span>MP {{ game.mp }} / {{ game.maxMp }}</span>
+                <span>Gold {{ game.gold }}</span>
+                <span>Status Points {{ game.statusPoints }}</span>
+                <span>Kills {{ game.kills }}</span>
+                <span>Deaths {{ game.deaths }}</span>
+              </div>
+            </div>
 
-          <h2>Battle Log</h2>
+            <div class="player-layout">
+              <div class="player-stats-column">
+                <div class="stat-panel">
+                  <h3>Combat Stats</h3>
+                  <div class="stat-grid">
+                    <span>ATK</span><strong>{{ game.attack }}</strong>
+                    <span>DEF</span><strong>{{ game.defense }}</strong>
+                    <span>MATK</span><strong>{{ game.magicAttack }}</strong>
+                    <span>MDEF</span><strong>{{ game.magicDefense }}</strong>
+                    <span>HIT</span><strong>{{ game.hit }}</strong>
+                    <span>FLEE</span><strong>{{ game.flee }}</strong>
+                    <span>CRIT</span><strong>{{ game.criticalChance.toFixed(1) }}%</strong>
+                    <span>ASPD</span><strong>{{ game.attackSpeed }}</strong>
+                  </div>
+                </div>
 
-          <p v-for="(log, index) in game.battleLog" :key="index">
-            {{ log }}
-          </p>
-        </div>
+                <div class="stat-panel">
+                  <h3>Base Stats</h3>
+
+                  <div v-for="(value, stat) in game.stats" :key="stat" class="base-stat-row">
+                    <div>
+                      <strong>{{ stat }}</strong>
+                      <span>{{ value }}</span>
+                      <small v-if="game.equipmentBaseStatBonuses[stat] > 0">
+                        +{{ game.equipmentBaseStatBonuses[stat] }} gear
+                      </small>
+                    </div>
+
+                    <button :disabled="game.statusPoints <= 0" @click="game.addStat(stat)">+1</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="character-panel">
+                <div class="character-art-placeholder">
+                  <span>CHARACTER</span>
+                  <strong>{{ getClassLabel(game.characterClass) }}</strong>
+                  <small>Artwork nanti di sini</small>
+                </div>
+              </div>
+
+              <div class="equipment-panel">
+                <h3>Equipment</h3>
+
+                <div class="equipment-grid">
+                  <div v-for="slot in equipmentSlots" :key="slot.key" class="equipment-slot">
+                    <span class="equipment-slot-label">{{ slot.label }}</span>
+
+                    <template v-if="game.equipped[slot.key]">
+                      <strong :class="getRarityClass(game.equipped[slot.key]!.rarity)">
+                        {{ game.equipped[slot.key]!.name }}
+                      </strong>
+
+                      <span class="equipment-level">Lv.{{ game.equipped[slot.key]!.level }}</span>
+
+                      <button class="unequip-button" @click="game.unequipItem(slot.key)">Unequip</button>
+                    </template>
+
+                    <span v-else class="equipment-empty">Empty</span>
+                  </div>
+                </div>
+
+                <p class="gear-bonus">
+                  Gear bonus: HP +{{ game.equipmentMainStatBonuses.HP }}, ATK +{{ game.equipmentMainStatBonuses.ATK }},
+                  DEF +{{ game.equipmentMainStatBonuses.DEF }}, MATK +{{ game.equipmentMainStatBonuses.MATK }}, MDEF +{{
+                    game.equipmentMainStatBonuses.MDEF
+                  }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- INVENTORY -->
+        <section class="collapsible-section">
+          <button class="section-header" type="button" @click="showInventory = !showInventory">
+            <span>Inventory</span>
+            <span>{{ showInventory ? '−' : '+' }}</span>
+          </button>
+
+          <div v-if="showInventory" class="section-body">
+            <p>{{ game.inventory.itemCount }} / {{ game.inventory.capacity }}</p>
+
+            <label>
+              Sort
+              <select :value="game.inventory.sortMode" @change="changeInventorySort">
+                <option value="rarityDesc">Rarity ↓</option>
+                <option value="rarityAsc">Rarity ↑</option>
+                <option value="levelDesc">Level ↓</option>
+                <option value="levelAsc">Level ↑</option>
+              </select>
+            </label>
+
+            <button :disabled="game.inventory.isEmpty" @click="game.sellAllFilteredItems">Sell All</button>
+
+            <h3>Auto Sell</h3>
+
+            <label>
+              <input type="checkbox" :checked="game.inventory.autoSell.enabled" @change="changeAutoSellEnabled" />
+              Enable Auto Sell
+            </label>
+
+            <br />
+
+            <label>
+              <input
+                type="checkbox"
+                :checked="game.inventory.autoSell.sellBelowLevelEnabled"
+                @change="changeAutoSellLevelEnabled"
+              />
+              Sell item below Level
+            </label>
+
+            <input type="number" min="1" :value="game.inventory.autoSell.sellBelowLevel" @change="changeAutoSellLevel" />
+
+            <br />
+
+            <label>
+              <input
+                type="checkbox"
+                :checked="game.inventory.autoSell.sellBelowRarityEnabled"
+                @change="changeAutoSellRarityEnabled"
+              />
+              Sell below rarity
+            </label>
+
+            <select :value="game.inventory.autoSell.minimumRarity" @change="changeMinimumRarity">
+              <option v-for="rarity in rarityOptions" :key="rarity" :value="rarity">
+                {{ rarity }}
+              </option>
+            </select>
+
+            <br />
+
+            <label>
+              <input type="checkbox" :checked="game.inventory.autoSell.sellOtherClasses" @change="changeOtherJobAutoSell" />
+              Sell equipment from other jobs
+            </label>
+
+            <div v-if="game.inventory.isEmpty">
+              <p>Inventory kosong.</p>
+            </div>
+
+            <div v-for="item in game.inventory.sortedItems" :key="item.id" class="inventory-item">
+              <hr />
+
+              <p>
+                <strong :class="getRarityClass(item.rarity)">
+                  {{ item.name }}
+                </strong>
+                <span> Lv.{{ item.level }}</span>
+              </p>
+
+              <p>{{ item.rarity.toUpperCase() }} • Quality {{ item.quality }}%</p>
+
+              <p>Job: {{ getClassLabel(item.requiredClass) }}</p>
+
+              <p>{{ item.mainStat }} {{ item.mainStatValue }}</p>
+
+              <p v-for="(affix, index) in item.affixes" :key="index">
+                {{ affix.stat }}
+                {{ affix.value }}
+              </p>
+
+              <p>Sell: {{ game.inventory.calculateSellPrice(item) }} Gold</p>
+
+              <button @click="equipItem(item)">Equip</button>
+
+              <button @click="game.toggleInventoryItemLock(item.id)">
+                {{ item.locked ? 'Unlock' : 'Lock' }}
+              </button>
+
+              <button :disabled="item.locked" @click="game.sellInventoryItem(item.id)">Sell</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- AUTO HUNT -->
+        <section class="collapsible-section">
+          <button class="section-header" type="button" @click="showAutoHunt = !showAutoHunt">
+            <span>Auto Hunt</span>
+            <span>{{ showAutoHunt ? '−' : '+' }}</span>
+          </button>
+
+          <div v-if="showAutoHunt" class="section-body">
+            <label>
+              Hunting Map
+              <select
+                :value="game.selectedMapId"
+                :disabled="game.isAutoHunting"
+                @change="game.selectMap(Number(($event.target as HTMLSelectElement).value))"
+              >
+                <option v-for="map in maps" :key="map.id" :value="map.id">
+                  {{ map.name }}
+                  (Lv. {{ map.minLevel }}-{{ map.maxLevel }})
+                </option>
+              </select>
+            </label>
+
+            <p>
+              Selected:
+              <strong>{{ game.selectedMap.name }}</strong>
+            </p>
+
+            <button v-if="!game.isAutoHunting" @click="game.startAutoHunt">Start Auto Hunt</button>
+            <button v-else @click="game.stopAutoHunt">Stop Auto Hunt</button>
+            <button :disabled="game.isAutoHunting" @click="game.rest">Rest</button>
+
+            <div v-if="game.currentMonster" class="monster-panel">
+              <hr />
+
+              <h3>
+                {{ game.currentMonster.name }}
+                Lv.{{ game.currentMonster.level }}
+              </h3>
+
+              <p>HP {{ game.monsterHp }} / {{ game.currentMonster.maxHp }}</p>
+              <p>ATK {{ game.currentMonster.attack }}</p>
+              <p>DEF {{ game.currentMonster.defense }}</p>
+              <p>MDEF {{ game.currentMonster.magicDefense }}</p>
+              <p>EXP {{ game.currentMonster.exp }}</p>
+              <p>Gold {{ game.currentMonster.gold }}</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- BATTLE LOG -->
+        <section class="collapsible-section">
+          <button class="section-header" type="button" @click="showBattleLog = !showBattleLog">
+            <span>Battle Log</span>
+            <span>{{ showBattleLog ? '−' : '+' }}</span>
+          </button>
+
+          <div v-if="showBattleLog" class="section-body battle-log">
+            <p v-if="!game.battleLog.length">Belum ada battle log.</p>
+
+            <p v-for="(log, index) in game.battleLog" :key="index">
+              {{ log }}
+            </p>
+          </div>
+        </section>
       </template>
     </section>
 
@@ -442,20 +461,9 @@ function changeOtherJobAutoSell(event: Event) {
               <span> Lv.{{ pendingAccessory.level }}</span>
             </div>
 
-            <span>
-              {{ pendingAccessory.rarity.toUpperCase() }}
-              • Quality {{ pendingAccessory.quality }}%
-            </span>
-
-            <span>
-              Job:
-              {{ pendingAccessory.requiredClass ?? 'All' }}
-            </span>
-
-            <span>
-              {{ pendingAccessory.mainStat }}
-              {{ pendingAccessory.mainStatValue }}
-            </span>
+            <span>{{ pendingAccessory.rarity.toUpperCase() }} • Quality {{ pendingAccessory.quality }}%</span>
+            <span>Job: {{ getClassLabel(pendingAccessory.requiredClass) }}</span>
+            <span>{{ pendingAccessory.mainStat }} {{ pendingAccessory.mainStatValue }}</span>
 
             <div v-if="pendingAccessory.affixes.length" class="item-affixes">
               <span v-for="(affix, index) in pendingAccessory.affixes" :key="index">
@@ -482,19 +490,11 @@ function changeOtherJobAutoSell(event: Event) {
             </div>
 
             <span>
-              {{ game.equipped.accessory1.rarity.toUpperCase() }}
-              • Quality {{ game.equipped.accessory1.quality }}%
+              {{ game.equipped.accessory1.rarity.toUpperCase() }} • Quality {{ game.equipped.accessory1.quality }}%
             </span>
 
-            <span>
-              Job:
-              {{ game.equipped.accessory1.requiredClass ?? 'All' }}
-            </span>
-
-            <span>
-              {{ game.equipped.accessory1.mainStat }}
-              {{ game.equipped.accessory1.mainStatValue }}
-            </span>
+            <span>Job: {{ getClassLabel(game.equipped.accessory1.requiredClass) }}</span>
+            <span>{{ game.equipped.accessory1.mainStat }} {{ game.equipped.accessory1.mainStatValue }}</span>
 
             <div v-if="game.equipped.accessory1.affixes.length" class="item-affixes">
               <span v-for="(affix, index) in game.equipped.accessory1.affixes" :key="index">
@@ -519,19 +519,11 @@ function changeOtherJobAutoSell(event: Event) {
             </div>
 
             <span>
-              {{ game.equipped.accessory2.rarity.toUpperCase() }}
-              • Quality {{ game.equipped.accessory2.quality }}%
+              {{ game.equipped.accessory2.rarity.toUpperCase() }} • Quality {{ game.equipped.accessory2.quality }}%
             </span>
 
-            <span>
-              Job:
-              {{ game.equipped.accessory2.requiredClass ?? 'All' }}
-            </span>
-
-            <span>
-              {{ game.equipped.accessory2.mainStat }}
-              {{ game.equipped.accessory2.mainStatValue }}
-            </span>
+            <span>Job: {{ getClassLabel(game.equipped.accessory2.requiredClass) }}</span>
+            <span>{{ game.equipped.accessory2.mainStat }} {{ game.equipped.accessory2.mainStatValue }}</span>
 
             <div v-if="game.equipped.accessory2.affixes.length" class="item-affixes">
               <span v-for="(affix, index) in game.equipped.accessory2.affixes" :key="index">
@@ -562,19 +554,11 @@ function changeOtherJobAutoSell(event: Event) {
             </div>
 
             <span>
-              {{ currentReplacementItem.rarity.toUpperCase() }}
-              • Quality {{ currentReplacementItem.quality }}%
+              {{ currentReplacementItem.rarity.toUpperCase() }} • Quality {{ currentReplacementItem.quality }}%
             </span>
 
-            <span>
-              Job:
-              {{ currentReplacementItem.requiredClass ?? 'All' }}
-            </span>
-
-            <span>
-              {{ currentReplacementItem.mainStat }}
-              {{ currentReplacementItem.mainStatValue }}
-            </span>
+            <span>Job: {{ getClassLabel(currentReplacementItem.requiredClass) }}</span>
+            <span>{{ currentReplacementItem.mainStat }} {{ currentReplacementItem.mainStatValue }}</span>
 
             <div v-if="currentReplacementItem.affixes.length" class="item-affixes">
               <span v-for="(affix, index) in currentReplacementItem.affixes" :key="index">
@@ -595,20 +579,9 @@ function changeOtherJobAutoSell(event: Event) {
               <span> Lv.{{ pendingEquipment.level }}</span>
             </div>
 
-            <span>
-              {{ pendingEquipment.rarity.toUpperCase() }}
-              • Quality {{ pendingEquipment.quality }}%
-            </span>
-
-            <span>
-              Job:
-              {{ pendingEquipment.requiredClass ?? 'All' }}
-            </span>
-
-            <span>
-              {{ pendingEquipment.mainStat }}
-              {{ pendingEquipment.mainStatValue }}
-            </span>
+            <span>{{ pendingEquipment.rarity.toUpperCase() }} • Quality {{ pendingEquipment.quality }}%</span>
+            <span>Job: {{ getClassLabel(pendingEquipment.requiredClass) }}</span>
+            <span>{{ pendingEquipment.mainStat }} {{ pendingEquipment.mainStatValue }}</span>
 
             <div v-if="pendingEquipment.affixes.length" class="item-affixes">
               <span v-for="(affix, index) in pendingEquipment.affixes" :key="index">
@@ -620,7 +593,6 @@ function changeOtherJobAutoSell(event: Event) {
 
         <div class="modal-actions">
           <button type="button" @click="replaceEquipment">Replace</button>
-
           <button type="button" class="cancel-button" @click="closeEquipmentModal">Cancel</button>
         </div>
       </div>
@@ -629,6 +601,180 @@ function changeOtherJobAutoSell(event: Event) {
 </template>
 
 <style scoped>
+.collapsible-section {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid #3a414d;
+  border-radius: 14px;
+  background: #191d24;
+}
+
+.section-header {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 0;
+  border-radius: 0;
+  background: #252b34;
+  color: #f5f5f5;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.section-header:hover {
+  background: #303743;
+}
+
+.section-body {
+  padding: 18px;
+}
+
+.player-summary {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.player-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 16px;
+}
+
+.player-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(240px, 1.15fr) minmax(320px, 1.35fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.player-stats-column {
+  display: grid;
+  gap: 16px;
+}
+
+.stat-panel,
+.character-panel,
+.equipment-panel {
+  padding: 16px;
+  border: 1px solid #3a414d;
+  border-radius: 12px;
+  background: #20252d;
+}
+
+.stat-panel h3,
+.equipment-panel h3 {
+  margin-top: 0;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 7px 14px;
+}
+
+.stat-grid strong {
+  text-align: right;
+}
+
+.base-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+}
+
+.base-stat-row > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.base-stat-row small {
+  color: #9ca6b5;
+}
+
+.character-panel {
+  display: grid;
+  min-height: 500px;
+  place-items: center;
+}
+
+.character-art-placeholder {
+  display: grid;
+  width: 100%;
+  min-height: 420px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px dashed #596372;
+  border-radius: 12px;
+  color: #9ca6b5;
+  text-align: center;
+}
+
+.character-art-placeholder strong {
+  color: #f5f5f5;
+  font-size: 24px;
+}
+
+.equipment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.equipment-slot {
+  display: grid;
+  min-height: 118px;
+  align-content: start;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #49515e;
+  border-radius: 10px;
+  background: #252b34;
+}
+
+.equipment-slot-label {
+  color: #9ca6b5;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.equipment-level {
+  color: #c9d2df;
+  font-size: 12px;
+}
+
+.equipment-empty {
+  margin-top: 12px;
+  color: #737d8c;
+}
+
+.unequip-button {
+  margin-top: auto;
+}
+
+.gear-bonus {
+  margin-bottom: 0;
+  color: #9ca6b5;
+  font-size: 12px;
+}
+
+.inventory-item {
+  margin-top: 12px;
+}
+
+.battle-log {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -771,7 +917,40 @@ function changeOtherJobAutoSell(event: Event) {
   color: #ff5252;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 1050px) {
+  .player-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .character-panel {
+    grid-column: 1 / -1;
+    order: 3;
+    min-height: 360px;
+  }
+
+  .character-art-placeholder {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 700px) {
+  .player-resource-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .player-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .character-panel {
+    grid-column: auto;
+    order: initial;
+  }
+
+  .equipment-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
   .accessory-choice-grid {
     grid-template-columns: 1fr;
   }
@@ -783,6 +962,13 @@ function changeOtherJobAutoSell(event: Event) {
   .replace-arrow {
     text-align: center;
     transform: rotate(90deg);
+  }
+}
+
+@media (max-width: 460px) {
+  .player-resource-grid,
+  .equipment-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
