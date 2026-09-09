@@ -12,6 +12,10 @@ const game = useGameStore()
 
 const pendingAccessory = ref<Equipment | null>(null)
 const pendingEquipment = ref<Equipment | null>(null)
+const hoveredInventoryItem = ref<Equipment | null>(null)
+const inventoryTooltipPosition = ref({ top: 0, left: 0 })
+
+let inventoryTooltipHideTimer: ReturnType<typeof setTimeout> | null = null
 
 const showPlayer = ref(true)
 const showInventory = ref(true)
@@ -22,6 +26,102 @@ type NonAccessorySlot = 'weapon' | 'head' | 'armor' | 'gloves' | 'boots' | 'offH
 
 function getRarityClass(rarity: EquipmentRarity) {
   return `rarity-${rarity}`
+}
+
+const inventorySlots = computed<(Equipment | null)[]>(() =>
+  Array.from(
+    { length: game.inventory.capacity },
+    (_, index) => game.inventory.sortedItems[index] ?? null,
+  ),
+)
+
+const equipmentIconPaths: Record<Equipment['slot'], string> = {
+  weapon: '/equipment/weapon.svg',
+  head: '/equipment/head.svg',
+  armor: '/equipment/armor.svg',
+  gloves: '/equipment/glove.svg',
+  boots: '/equipment/boot.svg',
+  offHand: '/equipment/off-hand.svg',
+  accessory: '/equipment/accessory.svg',
+}
+
+function getEquipmentIconStyle(item: Equipment) {
+  const iconPath = `url("${equipmentIconPaths[item.slot]}")`
+
+  return {
+    maskImage: iconPath,
+    WebkitMaskImage: iconPath,
+  }
+}
+
+function cancelInventoryTooltipHide() {
+  if (!inventoryTooltipHideTimer) {
+    return
+  }
+
+  clearTimeout(inventoryTooltipHideTimer)
+  inventoryTooltipHideTimer = null
+}
+
+function showInventoryTooltip(item: Equipment, event: Event) {
+  cancelInventoryTooltipHide()
+
+  const slot = event.currentTarget as HTMLElement
+  const slotBounds = slot.getBoundingClientRect()
+  const tooltipWidth = 280
+  const viewportPadding = 12
+
+  inventoryTooltipPosition.value = {
+    top: Math.max(
+      viewportPadding,
+      Math.min(slotBounds.bottom + 8, window.innerHeight - 360),
+    ),
+    left: Math.min(
+      Math.max(viewportPadding, slotBounds.left),
+      window.innerWidth - tooltipWidth - viewportPadding,
+    ),
+  }
+
+  hoveredInventoryItem.value = item
+}
+
+function scheduleInventoryTooltipHide() {
+  cancelInventoryTooltipHide()
+
+  inventoryTooltipHideTimer = setTimeout(() => {
+    hoveredInventoryItem.value = null
+    inventoryTooltipHideTimer = null
+  }, 120)
+}
+
+async function equipHoveredInventoryItem() {
+  if (!hoveredInventoryItem.value) {
+    return
+  }
+
+  const item = hoveredInventoryItem.value
+  hoveredInventoryItem.value = null
+
+  await equipItem(item)
+}
+
+function toggleHoveredInventoryItemLock() {
+  if (!hoveredInventoryItem.value) {
+    return
+  }
+
+  game.toggleInventoryItemLock(hoveredInventoryItem.value.id)
+}
+
+function sellHoveredInventoryItem() {
+  if (!hoveredInventoryItem.value || hoveredInventoryItem.value.locked) {
+    return
+  }
+
+  const itemId = hoveredInventoryItem.value.id
+  hoveredInventoryItem.value = null
+
+  void game.sellInventoryItem(itemId)
 }
 
 function getClassLabel(characterClass: CharacterClass | 'all') {
@@ -340,41 +440,74 @@ function changeOtherJobAutoSell(event: Event) {
               Sell equipment from other jobs
             </label>
 
-            <div v-if="game.inventory.isEmpty">
-              <p>Inventory kosong.</p>
+            <div class="inventory-grid-scroll">
+              <div class="inventory-grid" role="grid" aria-label="Inventory equipment slots">
+                <div
+                  v-for="(item, index) in inventorySlots"
+                  :key="item?.id ?? `empty-${index}`"
+                  class="inventory-slot"
+                  :class="item ? getRarityClass(item.rarity) : 'inventory-slot-empty'"
+                  :tabindex="item ? 0 : -1"
+                  role="gridcell"
+                  :aria-label="item ? `${item.name}, level ${item.level}, ${item.rarity}` : `Empty slot ${index + 1}`"
+                  @mouseenter="item && showInventoryTooltip(item, $event)"
+                  @mouseleave="item && scheduleInventoryTooltipHide()"
+                  @focus="item && showInventoryTooltip(item, $event)"
+                  @blur="item && scheduleInventoryTooltipHide()"
+                >
+                  <span
+                    v-if="item"
+                    class="inventory-equipment-icon"
+                    :style="getEquipmentIconStyle(item)"
+                    aria-hidden="true"
+                  ></span>
+                  <span v-if="item?.locked" class="inventory-lock-indicator" aria-label="Locked">●</span>
+                </div>
+              </div>
             </div>
 
-            <div v-for="item in game.inventory.sortedItems" :key="item.id" class="inventory-item">
-              <hr />
+            <Teleport to="body">
+              <div
+                v-if="hoveredInventoryItem"
+                class="inventory-tooltip"
+                :style="{
+                  top: `${inventoryTooltipPosition.top}px`,
+                  left: `${inventoryTooltipPosition.left}px`,
+                }"
+                @mouseenter="cancelInventoryTooltipHide"
+                @mouseleave="scheduleInventoryTooltipHide"
+              >
+                <p>
+                  <strong :class="getRarityClass(hoveredInventoryItem.rarity)">
+                    {{ hoveredInventoryItem.name }}
+                  </strong>
+                  <span> Lv.{{ hoveredInventoryItem.level }}</span>
+                </p>
 
-              <p>
-                <strong :class="getRarityClass(item.rarity)">
-                  {{ item.name }}
-                </strong>
-                <span> Lv.{{ item.level }}</span>
-              </p>
+                <p>{{ hoveredInventoryItem.rarity.toUpperCase() }} • Quality {{ hoveredInventoryItem.quality }}%</p>
+                <p>Job: {{ getClassLabel(hoveredInventoryItem.requiredClass) }}</p>
+                <p>{{ hoveredInventoryItem.mainStat }} {{ hoveredInventoryItem.mainStatValue }}</p>
 
-              <p>{{ item.rarity.toUpperCase() }} • Quality {{ item.quality }}%</p>
+                <p v-for="(affix, index) in hoveredInventoryItem.affixes" :key="index">
+                  {{ affix.stat }} {{ affix.value }}
+                </p>
 
-              <p>Job: {{ getClassLabel(item.requiredClass) }}</p>
+                <p>Sell: {{ game.inventory.calculateSellPrice(hoveredInventoryItem) }} Gold</p>
 
-              <p>{{ item.mainStat }} {{ item.mainStatValue }}</p>
-
-              <p v-for="(affix, index) in item.affixes" :key="index">
-                {{ affix.stat }}
-                {{ affix.value }}
-              </p>
-
-              <p>Sell: {{ game.inventory.calculateSellPrice(item) }} Gold</p>
-
-              <button @click="equipItem(item)">Equip</button>
-
-              <button @click="game.toggleInventoryItemLock(item.id)">
-                {{ item.locked ? 'Unlock' : 'Lock' }}
-              </button>
-
-              <button :disabled="item.locked" @click="game.sellInventoryItem(item.id)">Sell</button>
-            </div>
+                <div class="inventory-tooltip-actions">
+                  <button @click="equipHoveredInventoryItem">Equip</button>
+                  <button @click="toggleHoveredInventoryItemLock">
+                    {{ hoveredInventoryItem.locked ? 'Unlock' : 'Lock' }}
+                  </button>
+                  <button
+                    :disabled="hoveredInventoryItem.locked"
+                    @click="sellHoveredInventoryItem"
+                  >
+                    Sell
+                  </button>
+                </div>
+              </div>
+            </Teleport>
           </div>
         </section>
 
@@ -766,8 +899,84 @@ function changeOtherJobAutoSell(event: Event) {
   font-size: 12px;
 }
 
-.inventory-item {
-  margin-top: 12px;
+.inventory-grid-scroll {
+  max-height: 520px;
+  margin-top: 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.inventory-grid {
+  --inventory-empty-slot-color: #ffffff;
+  --inventory-slot-radius: 8px;
+
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inventory-slot {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid currentColor;
+  border-radius: var(--inventory-slot-radius);
+  background: #252b34;
+}
+
+.inventory-slot:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: -5px;
+}
+
+.inventory-slot-empty {
+  color: var(--inventory-empty-slot-color);
+}
+
+.inventory-equipment-icon {
+  width: 72%;
+  height: 72%;
+  background: currentColor;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+}
+
+.inventory-lock-indicator {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  color: currentColor;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.inventory-tooltip {
+  position: fixed;
+  z-index: 1100;
+  display: grid;
+  width: min(280px, calc(100vw - 24px));
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid #49515e;
+  border-radius: 10px;
+  background: #20252d;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+  color: #f5f5f5;
+}
+
+.inventory-tooltip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .battle-log {
@@ -957,6 +1166,14 @@ function changeOtherJobAutoSell(event: Event) {
 
   .equipment-compare {
     grid-template-columns: 1fr;
+  }
+
+  .inventory-grid {
+    gap: 4px;
+  }
+
+  .inventory-slot {
+    border-width: 1px;
   }
 
   .replace-arrow {
