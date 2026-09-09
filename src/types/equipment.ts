@@ -46,25 +46,6 @@ export interface EquipmentAffix {
 
 export interface Equipment {
   id: string
-
-  name: string
-  type: EquipmentType
-  slot: EquipmentSlot
-
-  requiredClass: EquipmentClassRequirement
-
-  level: number
-  rarity: EquipmentRarity
-  quality: number
-
-  mainStat: EquipmentMainStat
-  mainStatValue: number
-
-  affixes: EquipmentAffix[]
-}
-
-export interface Equipment {
-  id: string
   name: string
   type: EquipmentType
   slot: EquipmentSlot
@@ -75,6 +56,5 @@ export interface Equipment {
   mainStat: EquipmentMainStat
   mainStatValue: number
   affixes: EquipmentAffix[]
-
   locked: boolean
 }
